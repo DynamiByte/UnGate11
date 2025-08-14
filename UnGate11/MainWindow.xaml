@@ -1,0 +1,148 @@
+﻿<Window x:Class="UnGate11.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:UnGate11"
+        mc:Ignorable="d"
+        ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        Title="UnGate11" Height="300" Width="500"
+        WindowStyle="None" AllowsTransparency="True" Background="#121212">
+
+    <Window.Clip>
+        <RectangleGeometry Rect="0,0,500,300" RadiusX="15" RadiusY="15"/>
+    </Window.Clip>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation 
+                        From="450" To="400"  Duration="00:00:0.5"
+                        Storyboard.TargetProperty="(Window.Top)">
+                        <DoubleAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid>
+        <Grid MouseLeftButtonDown="DragWindow" Background="Transparent"/>
+
+        <TextBox
+            x:Name="PatchOutputBox"
+            Margin="20,220,20,10"
+            Height="60"
+            VerticalAlignment="Bottom"
+            IsReadOnly="True"
+            TextWrapping="Wrap"
+            Background="#222"
+            Foreground="White"
+            BorderThickness="0"
+            FontFamily="Consolas"
+            FontSize="12"/>
+        
+        <Label
+            Content="✕"
+            FontWeight="ExtraBold" FontSize="20" Foreground="White"
+            Height="30" Width="30" Padding="0" Margin="5"
+            HorizontalAlignment="Right" VerticalAlignment="Top" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            MouseLeftButtonUp="CloseWindow">
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="Coral" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="White" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <Image Source="UnGate11-banner.png" Width="300" Margin="0, 0, 0, 80" />
+
+        <Label
+            x:Name="PatchButton"
+            Content="Checking..."
+            FontFamily="Bahnschrift" FontWeight="Bold" FontSize="16"
+            Background="#218DE7" Foreground="White" BorderThickness="0"
+            Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
+            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,90,0,0"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            MouseLeftButtonUp="PatchButton_Left" MouseRightButtonUp="PatchButton_Right" >
+            <Label.Clip>
+                <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"></RectangleGeometry>
+            </Label.Clip>
+            <Label.RenderTransform>
+                <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
+            </Label.RenderTransform>
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)"
+                                            To="1.05" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)"
+                                            To="1.05" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)"
+                                            To="1" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)"
+                                            To="1" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <Label Visibility="Hidden" FontFamily="Bahnschrift" x:Name="ConnectionStateLabel" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="5"/>
+        <Label FontFamily="Bahnschrift" Foreground="White" x:Name="VersionLabel" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5" />
+    </Grid>
+</Window>

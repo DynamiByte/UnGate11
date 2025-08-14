@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>UnGate11</AssemblyName>
+    <StartupObject>UnGate11.App</StartupObject>
+    <ApplicationIcon>UnGate11.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <Authors>DynamiByte</Authors>
+    <PackageProjectUrl>https://github.com/DynamiByte/UnGate11/blob/main/UnGate11.exe</PackageProjectUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <RepositoryUrl>https://github.com/DynamiByte/UnGate11</RepositoryUrl>
+    <Description>UnGate11, a tool used to remove the Windows 11 install requirements.</Description>
+    <SignAssembly>false</SignAssembly>
+    <Version>0.1.0</Version>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>©2025</Copyright>
+    <PackageId>UnGate11</PackageId>
+    <Product>UnGate11 Utility</Product>
+    <PackageIcon></PackageIcon>
+    <PackageIconUrl />
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="UnGate11-banner.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="UnGate11-banner.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Skip_TPM_Check_on_Dynamic_Update.cmd" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Check_Patch_State.cmd" />
+  </ItemGroup>
+
+</Project>
