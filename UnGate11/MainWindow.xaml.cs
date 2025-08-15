@@ -80,6 +80,7 @@ namespace UnGate11
             Task.Run(() => ListenPipe(_pipeCts.Token));
 
             // Animate the patch button as before
+            /*
             Task.Run(() =>
             {
                 while (true)
@@ -98,6 +99,7 @@ namespace UnGate11
                     Thread.Sleep(100);
                 }
             });
+            */
         }
 
         private void ListenPipe(CancellationToken token)
