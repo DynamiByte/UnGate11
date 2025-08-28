@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
+	<!-- NEEDS at least Windows 10 version 2004 (aka May 2020 Update or 20H1)-->
+	<SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <AssemblyName>UnGate11</AssemblyName>
     <StartupObject>UnGate11.App</StartupObject>
@@ -21,8 +23,10 @@
     <Product>UnGate11 Utility</Product>
     <PackageIcon></PackageIcon>
     <PackageIconUrl />
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
-
+	
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>portable</DebugType>
@@ -34,25 +38,22 @@
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
-
+	
   <ItemGroup>
-    <None Remove="UnGate11-banner.png" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <None Remove="bg.png" />
     <Reference Include="Microsoft.VisualBasic" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="UnGate11-banner.png" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <Resource Include="bg.png" />
     <EmbeddedResource Include="Skip_TPM_Check_on_Dynamic_Update.cmd" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="Check_Patch_State.cmd" />
+	<EmbeddedResource Include="windows_update_refresh.bat" />
+	<None Include="app.manifest" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

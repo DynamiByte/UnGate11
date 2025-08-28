@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,9 +12,6 @@ using System.Windows.Threading;
 
 namespace UnGate11
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private string _status;
@@ -24,6 +20,9 @@ namespace UnGate11
 
         private const string PipeName = "UnGate11Pipe";
         private CancellationTokenSource _pipeCts;
+
+        // Add this field to track patch status
+        private string _currentPatchState = "unpatched"; // Default, will be updated by ListenPipe
 
         public MainWindow()
         {
@@ -41,65 +40,35 @@ namespace UnGate11
                 var assembly = Assembly.GetExecutingAssembly();
                 string checkResourceName = assembly.GetManifestResourceNames()
                     .FirstOrDefault(n => n.EndsWith("Check_Patch_State.cmd", StringComparison.OrdinalIgnoreCase));
-                if (checkResourceName == null)
+                using (var stream = assembly.GetManifestResourceStream(checkResourceName))
+                using (var file = new FileStream(tempCheckCmdPath, FileMode.Create, FileAccess.Write))
                 {
-                    PatchOutputBox.Text = "[ERROR] Embedded check script not found.";
+                    stream.CopyTo(file);
                 }
-                else
+                try
                 {
-                    using (var stream = assembly.GetManifestResourceStream(checkResourceName))
-                    using (var file = new FileStream(tempCheckCmdPath, FileMode.Create, FileAccess.Write))
+                    var psi = new ProcessStartInfo
                     {
-                        stream.CopyTo(file);
-                    }
-                    try
-                    {
-                        var psi = new ProcessStartInfo
-                        {
-                            FileName = tempCheckCmdPath,
-                            UseShellExecute = true,
-                            CreateNoWindow = false
-                        };
+                        FileName = tempCheckCmdPath,
+                        UseShellExecute = true,
+                        CreateNoWindow = false
+                    };
                         Process.Start(psi);
-                    }
-                    catch (Exception ex)
-                    {
-                        PatchOutputBox.Text = "[ERROR] Failed to launch check script: " + ex.Message;
-                    }
-                    // Optionally delete the temp file after a delay
-                    // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempCheckCmdPath); } catch { } });
                 }
+                catch (Exception ex)
+                {
+                }
+                // Optionally delete the temp file after a delay
+                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempCheckCmdPath); } catch { } });
             }
             catch (Exception ex)
             {
-                PatchOutputBox.Text = "[ERROR] Failed to extract check script: " + ex.Message;
             }
 
             // Start the named pipe server for status updates from the script
             _pipeCts = new CancellationTokenSource();
             Task.Run(() => ListenPipe(_pipeCts.Token));
 
-            // Animate the patch button as before
-            /*
-            Task.Run(() =>
-            {
-                while (true)
-                {
-                    if (!_done)
-                    {
-                        if (++_ticks > 12)
-                            _ticks = 0;
-
-                        string load = _status + ".";
-                        if (_ticks > 4) load += ".";
-                        if (_ticks > 8) load += ".";
-
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Render, new Action(() => PatchButton.Content = load));
-                    }
-                    Thread.Sleep(100);
-                }
-            });
-            */
         }
 
         private void ListenPipe(CancellationToken token)
@@ -120,17 +89,19 @@ namespace UnGate11
                                 if (line == "C1")
                                 {
                                     SetStatus("unpatched");
+                                    _currentPatchState = "unpatched";
                                     PatchButton.Content = "Patch";
                                 }
                                 else if (line == "C0")
                                 {
                                     SetStatus("patched");
+                                    _currentPatchState = "patched";
                                     PatchButton.Content = "Unpatch";
                                 }
                                 else if (line == "P0")
                                 {
                                     SetStatus("patched");
-                                    PatchOutputBox.Text = "Patched";
+                                    _currentPatchState = "patched";
                                     PatchButton.Content = "Patch Applied";
                                     Task.Run(async () =>
                                     {
@@ -141,7 +112,7 @@ namespace UnGate11
                                 else if (line == "P1")
                                 {
                                     SetStatus("unpatched");
-                                    PatchOutputBox.Text = "Unpatched";
+                                    _currentPatchState = "unpatched";
                                     PatchButton.Content = "Patch Removed";
                                     Task.Run(async () =>
                                     {
@@ -149,9 +120,17 @@ namespace UnGate11
                                         Dispatcher.Invoke(() => PatchButton.Content = "Patch");
                                     });
                                 }
+                                else if (line == "WUR")
+                                {
+                                    UpdateRefreshButton.Content = "Refreshed";
+                                    Task.Run(async () =>
+                                    {
+                                        await Task.Delay(3000);
+                                        Dispatcher.Invoke(() => UpdateRefreshButton.Content = "Refresh Windows Update");
+                                    });
+                                }
                                 else
                                 {
-                                    PatchOutputBox.Text = "Unknown status: " + line;
                                     PatchButton.Content = "Patch";
                                 }
                             });
@@ -201,8 +180,13 @@ namespace UnGate11
         {
             if (!_done) return;
 
+            // Set button content to "Patching" or "Unpatching" based on current state
+            if (_currentPatchState == "unpatched")
+                PatchButton.Content = "Patching";
+            else
+                PatchButton.Content = "Unpatching";
+
             SetStatus("patching");
-            PatchOutputBox.Text = "";
 
             // Extract embedded CMD resource to temp file
             string tempCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Skip_TPM_Check_on_Dynamic_Update.cmd");
@@ -213,7 +197,6 @@ namespace UnGate11
                     .FirstOrDefault(n => n.EndsWith("Skip_TPM_Check_on_Dynamic_Update.cmd", StringComparison.OrdinalIgnoreCase));
                 if (resourceName == null)
                 {
-                    PatchOutputBox.Text = "[ERROR] Embedded patch script not found.";
                     SetStatus("done");
                     return;
                 }
@@ -225,7 +208,6 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                PatchOutputBox.Text = "[ERROR] Failed to extract script: " + ex.Message;
                 SetStatus("done");
                 return;
             }
@@ -243,7 +225,6 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                PatchOutputBox.Text = "[ERROR] " + ex.Message;
             }
             finally
             {
@@ -256,6 +237,65 @@ namespace UnGate11
 
         // Right click: do nothing, but required by XAML
         private void PatchButton_Right(object sender, MouseButtonEventArgs e)
+        {
+            // No-op, but required for XAML compatibility
+        }
+
+        private void UpdateRefreshButton_Left(object sender, MouseButtonEventArgs e)
+        {
+            if (!_done) return;
+
+            UpdateRefreshButton.Content = "Refreshing";
+
+            // Extract embedded CMD resource to temp file
+            string tempCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "windows_update_refresh.bat");
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                string resourceName = assembly.GetManifestResourceNames()
+                    .FirstOrDefault(n => n.EndsWith("windows_update_refresh.bat", StringComparison.OrdinalIgnoreCase));
+                if (resourceName == null)
+                {
+                    SetStatus("done");
+                    return;
+                }
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                using (var file = new FileStream(tempCmdPath, FileMode.Create, FileAccess.Write))
+                {
+                    stream.CopyTo(file);
+                }
+            }
+            catch (Exception ex)
+            {
+                SetStatus("done");
+                return;
+            }
+
+            try
+            {
+                // Start the CMD file with the same permissions as the app (no elevation, no output redirection)
+                var psi = new ProcessStartInfo
+                {
+                    FileName = tempCmdPath,
+                    UseShellExecute = true,
+                    CreateNoWindow = false
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+            }
+            finally
+            {
+                // Optionally delete the temp file after a delay, idk
+                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempCmdPath); } catch { } });
+            }
+
+            SetStatus("done");
+        }
+
+        // smae bae
+        private void UpdateRefreshButton_Right(object sender, MouseButtonEventArgs e)
         {
             // No-op, but required for XAML compatibility
         }

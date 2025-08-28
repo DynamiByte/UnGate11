@@ -36,7 +36,11 @@ echo;
 
 ::# start update services
 net start bits /y & net start wuauserv /y & net start usosvc /y 2>nul & start /min UsoClient RefreshSettings
-echo;AveYo: run again / reboot if there are still pending files or services & pause
+
+powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('WUR'); $sw.Close(); $p.Close()"
+
+:: echo;AveYo: run again / reboot if there are still pending files or services & pause
+
 exit /b
 
 '@); $0 = "$env:temp\windows_update_refresh.bat"; ${(=)||} -split "\r?\n" | out-file $0 -encoding default -force; & $0

@@ -2,8 +2,8 @@
 
 A program that patches Windows in such a way that it removes the install restrictions for Windows 11, be it installing through settings or an iso.
 
-IT IS NOT STABLE YET.
+first build. yay!
 
-IT HAS YET TO REACH ITS FIRST BUILD
+it works fine ig, but im looking to fix some things, such ass the cmd window popups
 
-WIP
+theres also sooo much garbage code
