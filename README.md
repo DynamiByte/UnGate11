@@ -15,8 +15,7 @@ You may need to Restart your PC if the Windows 11 setup still fails, then Refres
 
 By patching, I mean it modifies the registry and some system files
 in order to make Windows think it's running on a supported system.
-This project is open source and free to use,
-but please consider starring the repo if you find it useful.
+This project is open source and free to use, but please consider starring the repo if you find it useful.
 
 This program is meant to be used for updating **existing** Windows installations to Windows 11 on unsupported hardware.
 The supported installations/operating systems are Windows 10 version 2004 and later, and all Windows 11 versions.
