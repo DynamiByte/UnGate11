@@ -1,6 +1,1 @@
-﻿namespace UnGate11
-{
-    public partial class App
-    {
-    }
-}
+﻿namespace UnGate11{public partial class App{}}
