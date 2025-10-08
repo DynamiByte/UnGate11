@@ -43,5 +43,5 @@ powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'U
 
 exit /b
 
-'@); $0 = "$env:temp\windows_update_refresh.bat"; ${(=)||} -split "\r?\n" | out-file $0 -encoding default -force; & $0
+'@); $0 = "$env:temp\Refresh.cmd"; ${(=)||} -split "\r?\n" | out-file $0 -encoding default -force; & $0
 # press enter

@@ -1,8 +1,7 @@
-@(set '(=)||' <# lean and mean cmd / powershell hybrid #> @'
+@(set '(=)||' <# indeed a lean and mean cmd / powershell hybrid #> @'
 
-::# Get 11 on 'unsupported' PC via Windows Update or mounted ISO (no patching needed)
-::# if WU is stuck use windows_update_refresh.bat; Beta/Dev/Canary needs OfflineInsiderEnroll
-::# V13: skip 2nd tpm check on Canary iso; no Server label; future proofing; tested with 26010 iso, wu and wu repair version
+::# Based on Skip TPM Check on Dynamic Update V13 by AveYo
+::(https://github.com/AveYo/MediaCreationTool.bat/blob/main/bypass11/Skip_TPM_Check_on_Dynamic_Update.cmd)
 
 @echo off & title Checking patch status...
 if /i "%~f0" neq "%SystemDrive%\Scripts\get11.cmd" goto setup
@@ -41,60 +40,39 @@ if %VER%_%PRE% == 11_ISO powershell -nop -c iex($env:C) >nul 2>nul
 exit /b
 
 :setup
-::# elevate with native shell by AveYo
->nul reg add hkcu\software\classes\.Admin\shell\runas\command /f /ve /d "cmd /x /d /r set \"f0=%%2\"& call \"%%2\" %%3"& set _= %*
->nul fltmc|| if "%f0%" neq "%~f0" (cd.>"%temp%\runas.Admin" & start "%~n0" /high "%temp%\runas.Admin" "%~f0" "%_:"=""%" & exit /b)
-
-::# lean xp+ color macros by AveYo:  %<%:af " hello "%>>%  &  %<%:cf " w\"or\"ld "%>%   for single \ / " use .%|%\  .%|%/  \"%|%\"
-for /f "delims=:" %%s in ('echo;prompt $h$s$h:^|cmd /d') do set "|=%%s"&set ">>=\..\c nul&set /p s=%%s%%s%%s%%s%%s%%s%%s<nul&popd"
-set "<=pushd "%appdata%"&2>nul findstr /c:\ /a" &set ">=%>>%&echo;" &set "|=%|:~0,1%" &set /p s=\<nul>"%appdata%\c"
-
-::# toggle when launched without arguments, else jump to arguments: "install" or "remove"
+::Install or remove if "patch" argument is present, else relay install status
 set CLI=%*& (set IFEO=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options)
 wmic /namespace:"\\root\subscription" path __EventFilter where Name="Skip TPM Check on Dynamic Update" delete >nul 2>nul & rem v1
 reg delete "%IFEO%\vdsldr.exe" /f 2>nul & rem v2 - v5
-if /i "%CLI%"=="" reg query "%IFEO%\SetupHost.exe\0" /v Debugger >nul 2>nul && goto remove || goto install
-if /i "%~1"=="install" (goto install) else if /i "%~1"=="remove" goto remove
+if /i "%CLI%"=="" reg query "%IFEO%\SetupHost.exe\0" /v Debugger >nul 2>nul && goto checkistrue || goto checkisfalse
+if /i "%~1"=="patch" reg query "%IFEO%\SetupHost.exe\0" /v Debugger >nul 2>nul && goto remove || goto install
+
+:checkisfalse
+::Patch has not been detected
+powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('C1'); $sw.Close(); $p.Close()"
+exit /b
+
+:checkistrue
+::Patch has been detected
+powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('C0'); $sw.Close(); $p.Close()"
+exit /b
 
 :install
-
-::yes, im just commenting out the patcher and unpatcher.
-::shitty ass solution, but it will be revised later (i hope)
-:: (im too lazy to read all ts and figure out if i can get rid of anything else)
-::im fucking lazy
-
-::mkdir %SystemDrive%\Scripts >nul 2>nul & copy /y "%~f0" "%SystemDrive%\Scripts\get11.cmd" >nul 2>nul
-::reg add "%IFEO%\SetupHost.exe" /f /v UseFilter /d 1 /t reg_dword >nul
-::reg add "%IFEO%\SetupHost.exe\0" /f /v FilterFullPath /d "%SystemDrive%\$WINDOWS.~BT\Sources\SetupHost.exe" >nul
-::reg add "%IFEO%\SetupHost.exe\0" /f /v Debugger /d "%SystemDrive%\Scripts\get11.cmd" >nul
-
-::echo;
-::%<%:f0 " Skip TPM Check on Dynamic Update V13 "%>>% & %<%:2f " INSTALLED "%>>% & %<%:f0 " run again to remove "%>%
-::if /i "%CLI%"=="" timeout /t 7
-
-powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('C1'); $sw.Close(); $p.Close()"
-
-
-::if it wanna install its unpatched, etc... so uhh inside of :install this time its actually 1, rather than 0
-:: and vise versa ig
-
+title Patching
+mkdir %SystemDrive%\Scripts >nul 2>nul & copy /y "%~f0" "%SystemDrive%\Scripts\get11.cmd" >nul 2>nul
+reg add "%IFEO%\SetupHost.exe" /f /v UseFilter /d 1 /t reg_dword >nul
+reg add "%IFEO%\SetupHost.exe\0" /f /v FilterFullPath /d "%SystemDrive%\$WINDOWS.~BT\Sources\SetupHost.exe" >nul
+reg add "%IFEO%\SetupHost.exe\0" /f /v Debugger /d "%SystemDrive%\Scripts\get11.cmd" >nul
+::Patch was installed
+powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('P0'); $sw.Close(); $p.Close()"
 
 exit /b
 
 :remove
-
-:: balls
-
-::del /f /q "%SystemDrive%\Scripts\get11.cmd" "%Public%\get11.cmd" "%ProgramData%\get11.cmd" >nul 2>nul
-::reg delete "%IFEO%\SetupHost.exe" /f >nul 2>nul
-
-::echo;
-::%<%:f0 " Skip TPM Check on Dynamic Update V13 "%>>% & %<%:df " REMOVED "%>>% & %<%:f0 " run again to install "%>%
-::if /i "%CLI%"=="" timeout /t 7
-
-powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('C0'); $sw.Close(); $p.Close()"
+title Unpatching
+del /f /q "%SystemDrive%\Scripts\get11.cmd" "%Public%\get11.cmd" "%ProgramData%\get11.cmd" >nul 2>nul
+reg delete "%IFEO%\SetupHost.exe" /f >nul 2>nul
+::Patch was removed
+powershell -Command "$p=new-object System.IO.Pipes.NamedPipeClientStream('.', 'UnGate11Pipe', [IO.Pipes.PipeDirection]::Out); $p.Connect(); $sw=new-object System.IO.StreamWriter($p); $sw.AutoFlush=$true; $sw.WriteLine('P1'); $sw.Close(); $p.Close()"
 
 exit /b
-
-'@); $0 = "$env:temp\Skip_TPM_Check_on_Dynamic_Update.cmd"; ${(=)||} -split "\r?\n" | out-file $0 -encoding default -force; & $0
-# press enter

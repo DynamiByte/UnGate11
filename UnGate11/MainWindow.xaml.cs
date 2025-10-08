@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace UnGate11
@@ -18,11 +20,16 @@ namespace UnGate11
         private bool _done = true;
         private int _ticks;
 
+        private BitmapDecoder _gifDecoder;
+        private int _gifFrameIndex = 0;
+        private DispatcherTimer _gifTimer;
+
         private const string PipeName = "UnGate11Pipe";
         private CancellationTokenSource _pipeCts;
 
-        // Add this field to track patch status
         private string _currentPatchState = "unpatched"; // Default, will be updated by ListenPipe
+
+        private event Action<string> PipeLineReceived;
 
         public MainWindow()
         {
@@ -30,16 +37,18 @@ namespace UnGate11
             VersionLabel.Content = $"v{GetVersion().Major}.{GetVersion().Minor}.{GetVersion().Build}";
             SetStatus("ready");
 
+            this.StateChanged += MainWindow_StateChanged;
+
             // Set default text at startup
             PatchButton.Content = "Checking Patch State...";
 
-            // Extract embedded CMD resource to temp file and launch Check_Patch_State.cmd
-            string tempCheckCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Check_Patch_State.cmd");
+            // Extract embedded CMD resource to temp file and launch Patcher.cmd
+            string tempCheckCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Patcher.cmd");
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
                 string checkResourceName = assembly.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("Check_Patch_State.cmd", StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(n => n.EndsWith("Patcher.cmd", StringComparison.OrdinalIgnoreCase));
                 using (var stream = assembly.GetManifestResourceStream(checkResourceName))
                 using (var file = new FileStream(tempCheckCmdPath, FileMode.Create, FileAccess.Write))
                 {
@@ -86,6 +95,8 @@ namespace UnGate11
                         {
                             Dispatcher.Invoke(() =>
                             {
+                                PipeLineReceived?.Invoke(line); // Raise event for external handlers
+
                                 if (line == "C1")
                                 {
                                     SetStatus("unpatched");
@@ -100,6 +111,10 @@ namespace UnGate11
                                 }
                                 else if (line == "P0")
                                 {
+                                    // Load ani
+                                    ((Storyboard)FindResource("FadeLoadingOut")).Begin();
+                                    StopLoadingGIF();
+                                    ((Storyboard)FindResource("FadeLogoIn")).Begin();
                                     SetStatus("patched");
                                     _currentPatchState = "patched";
                                     PatchButton.Content = "Patch Applied";
@@ -111,6 +126,10 @@ namespace UnGate11
                                 }
                                 else if (line == "P1")
                                 {
+                                    // Load ani
+                                    ((Storyboard)FindResource("FadeLoadingOut")).Begin();
+                                    StopLoadingGIF();
+                                    ((Storyboard)FindResource("FadeLogoIn")).Begin();
                                     SetStatus("unpatched");
                                     _currentPatchState = "unpatched";
                                     PatchButton.Content = "Patch Removed";
@@ -122,6 +141,10 @@ namespace UnGate11
                                 }
                                 else if (line == "WUR")
                                 {
+                                    //Load ani
+                                    ((Storyboard)FindResource("FadeLoadingOut")).Begin();
+                                    StopLoadingGIF();
+                                    ((Storyboard)FindResource("FadeLogoIn")).Begin();
                                     UpdateRefreshButton.Content = "Refreshed";
                                     Task.Run(async () =>
                                     {
@@ -175,10 +198,73 @@ namespace UnGate11
             Console.WriteLine("[Status] " + status);
         }
 
+        private void StartLoadingGIF()
+        {
+            // Use temp path for GIF
+            string tempGIFPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "load.gif");
+
+            // Extract embedded GIF resource to temp file if not already present
+            if (!File.Exists(tempGIFPath))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                string gifResourceName = assembly.GetManifestResourceNames()
+                    .FirstOrDefault(n => n.EndsWith("load.gif", StringComparison.OrdinalIgnoreCase));
+                if (gifResourceName == null)
+                {
+                    //MessageBox.Show("Could not find load.gif as an embedded resource.");
+                    return;
+                }
+                using (var stream = assembly.GetManifestResourceStream(gifResourceName))
+                using (var file = new FileStream(tempGIFPath, FileMode.Create, FileAccess.Write))
+                {
+                    stream.CopyTo(file);
+                }
+            }
+
+            // Load GIF from temp file
+            if (_gifDecoder == null)
+            {
+                using (var fileStream = new FileStream(tempGIFPath, FileMode.Open, FileAccess.Read))
+                {
+                    _gifDecoder = BitmapDecoder.Create(fileStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                }
+            }
+
+            _gifFrameIndex = 0;
+            LoadingGIF.Source = _gifDecoder.Frames[_gifFrameIndex];
+            LoadingGIF.Visibility = Visibility.Visible;
+            LoadingGIF.Opacity = 1;
+
+            if (_gifTimer == null)
+            {
+                _gifTimer = new DispatcherTimer();
+                _gifTimer.Interval = TimeSpan.FromMilliseconds(24);
+                _gifTimer.Tick += (s, e) =>
+                {
+                    _gifFrameIndex = (_gifFrameIndex + 1) % _gifDecoder.Frames.Count;
+                    LoadingGIF.Source = _gifDecoder.Frames[_gifFrameIndex];
+                };
+            }
+            _gifTimer.Start();
+        }
+        private void StopLoadingGIF()
+        {
+            if (_gifTimer != null)
+                _gifTimer.Stop();
+            LoadingGIF.Visibility = Visibility.Collapsed;
+            LoadingGIF.Opacity = 0;
+        }
+
         // Left click: Run patcher
-        private void PatchButton_Left(object sender, MouseButtonEventArgs e)
+
+        private async void PatchButton_Left(object sender, MouseButtonEventArgs e)
         {
             if (!_done) return;
+
+            // Fade out logo and show loading gif
+            ((Storyboard)FindResource("FadeLogoOut")).Begin();
+            ((Storyboard)FindResource("FadeLoadingIn")).Begin();
+            StartLoadingGIF();
 
             // Set button content to "Patching" or "Unpatching" based on current state
             if (_currentPatchState == "unpatched")
@@ -188,49 +274,74 @@ namespace UnGate11
 
             SetStatus("patching");
 
-            // Extract embedded CMD resource to temp file
-            string tempCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Skip_TPM_Check_on_Dynamic_Update.cmd");
-            try
+            // Run patch operation asynchronously
+            string tempPatcherCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Patcher.cmd");
+            await Task.Run(() =>
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                string resourceName = assembly.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("Skip_TPM_Check_on_Dynamic_Update.cmd", StringComparison.OrdinalIgnoreCase));
-                if (resourceName == null)
+                try
                 {
-                    SetStatus("done");
+                    var assembly = Assembly.GetExecutingAssembly();
+                    string resourceName = assembly.GetManifestResourceNames()
+                        .FirstOrDefault(n => n.EndsWith("Patcher.cmd", StringComparison.OrdinalIgnoreCase));
+                    if (resourceName == null)
+                    {
+                        Dispatcher.Invoke(() => SetStatus("done"));
+                        return;
+                    }
+                    using (var stream = assembly.GetManifestResourceStream(resourceName))
+                    using (var file = new FileStream(tempPatcherCmdPath, FileMode.Create, FileAccess.Write))
+                    {
+                        stream.CopyTo(file);
+                    }
+                }
+                catch (Exception)
+                {
+                    Dispatcher.Invoke(() => SetStatus("done"));
                     return;
                 }
-                using (var stream = assembly.GetManifestResourceStream(resourceName))
-                using (var file = new FileStream(tempCmdPath, FileMode.Create, FileAccess.Write))
+
+                try
                 {
-                    stream.CopyTo(file);
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = tempPatcherCmdPath,
+                        Arguments = "patch",
+                        UseShellExecute = true,
+                        CreateNoWindow = false
+                    };
+                    Process.Start(psi);
+                }
+                catch (Exception)
+                {
+                }
+            });
+
+            // Set up deletion after receiving "P0" or "P1" from pipe
+            void DeleteCmdFileAfterPatch(string line)
+            {
+                if ((line == "P0" || line == "P1") && File.Exists(tempPatcherCmdPath))
+                {
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(1000);
+                        try { File.Delete(tempPatcherCmdPath); } catch { }
+                    });
                 }
             }
-            catch (Exception ex)
-            {
-                SetStatus("done");
-                return;
-            }
 
-            try
+            // Attach to ListenPipe event via a delegate
+            Action<string> pipeLineHandler = null;
+            pipeLineHandler = (line) =>
             {
-                // Start the CMD file with the same permissions as the app (no elevation, no output redirection)
-                var psi = new ProcessStartInfo
+                DeleteCmdFileAfterPatch(line);
+                // Detach after first match
+                if (line == "P0" || line == "P1")
                 {
-                    FileName = tempCmdPath,
-                    UseShellExecute = true,
-                    CreateNoWindow = false
-                };
-                Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-            }
-            finally
-            {
-                // Optionally delete the temp file after a delay, idk
-                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempCmdPath); } catch { } });
-            }
+                    PipeLineReceived -= pipeLineHandler;
+                }
+            };
+
+            PipeLineReceived += pipeLineHandler;
 
             SetStatus("done");
         }
@@ -245,22 +356,26 @@ namespace UnGate11
         {
             if (!_done) return;
 
+            ((Storyboard)FindResource("FadeLogoOut")).Begin();
+            ((Storyboard)FindResource("FadeLoadingIn")).Begin();
+            StartLoadingGIF();
+
             UpdateRefreshButton.Content = "Refreshing";
 
             // Extract embedded CMD resource to temp file
-            string tempCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "windows_update_refresh.bat");
+            string tempPatcherCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Refresh.cmd");
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
                 string resourceName = assembly.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("windows_update_refresh.bat", StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(n => n.EndsWith("Refresh.cmd", StringComparison.OrdinalIgnoreCase));
                 if (resourceName == null)
                 {
                     SetStatus("done");
                     return;
                 }
                 using (var stream = assembly.GetManifestResourceStream(resourceName))
-                using (var file = new FileStream(tempCmdPath, FileMode.Create, FileAccess.Write))
+                using (var file = new FileStream(tempPatcherCmdPath, FileMode.Create, FileAccess.Write))
                 {
                     stream.CopyTo(file);
                 }
@@ -276,7 +391,7 @@ namespace UnGate11
                 // Start the CMD file with the same permissions as the app (no elevation, no output redirection)
                 var psi = new ProcessStartInfo
                 {
-                    FileName = tempCmdPath,
+                    FileName = tempPatcherCmdPath,
                     UseShellExecute = true,
                     CreateNoWindow = false
                 };
@@ -288,7 +403,7 @@ namespace UnGate11
             finally
             {
                 // Optionally delete the temp file after a delay, idk
-                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempCmdPath); } catch { } });
+                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempPatcherCmdPath); } catch { } });
             }
 
             SetStatus("done");
@@ -302,10 +417,44 @@ namespace UnGate11
 
         private Version GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
 
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            if (WindowState == WindowState.Normal)
+            {
+                var fadeInStoryboard = (Storyboard)FindResource("FadeInWindow");
+                fadeInStoryboard.Begin(this);
+            }
+        }
+
         private void CloseWindow(object sender, MouseButtonEventArgs e)
         {
-            _pipeCts?.Cancel();
+            var storyboard = (Storyboard)FindResource("SlideOutWindow");
+            storyboard.Completed += (s, args) =>
+            {
+                _pipeCts?.Cancel();
             Application.Current.Shutdown();
+            };
+            storyboard.Begin(this);
+        }
+
+        private void MinimizeWindow(object sender, MouseButtonEventArgs e)
+        {
+            var storyboard = (Storyboard)FindResource("FadeOutWindow");
+            storyboard.Completed += (s, args) =>
+            {
+                WindowState = WindowState.Minimized;
+                Opacity = 1;
+                //visible.Begin(this);
+            };
+            storyboard.Begin(this);
+        }
+        private void Info(object sender, MouseButtonEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/DynamiByte/UnGate11/blob/master/README.md",
+                UseShellExecute = true
+            });
         }
 
         private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();

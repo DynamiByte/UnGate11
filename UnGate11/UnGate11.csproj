@@ -16,7 +16,7 @@
     <RepositoryUrl>https://github.com/DynamiByte/UnGate11</RepositoryUrl>
     <Description>UnGate11, a tool used to remove the Windows 11 install requirements.</Description>
     <SignAssembly>false</SignAssembly>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Copyright>©2025</Copyright>
     <PackageId>UnGate11</PackageId>
@@ -38,18 +38,14 @@
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
-	
+
   <ItemGroup>
-    <None Remove="bg.png" />
     <Reference Include="Microsoft.VisualBasic" />
     <Resource Include="bg.png" />
-    <EmbeddedResource Include="Skip_TPM_Check_on_Dynamic_Update.cmd" />
-    <EmbeddedResource Include="Check_Patch_State.cmd" />
-	<EmbeddedResource Include="windows_update_refresh.bat" />
+    <EmbeddedResource Include="load.gif" />
+    <EmbeddedResource Include="Patcher.cmd" />
+	<EmbeddedResource Include="Refresh.cmd" />
 	<None Include="app.manifest" />
-  </ItemGroup>
-	
-  <ItemGroup>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

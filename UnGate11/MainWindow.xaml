@@ -22,8 +22,15 @@
             <BeginStoryboard>
                 <Storyboard>
                     <DoubleAnimation 
-                        From="450" To="400"  Duration="00:00:0.5"
-                        Storyboard.TargetProperty="(Window.Top)">
+                    From="450" To="400" Duration="0:0:0.5"
+                    Storyboard.TargetProperty="(Window.Top)">
+                        <DoubleAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation
+                    From="0" To="1" Duration="0:0:0.5"
+                    Storyboard.TargetProperty="Opacity">
                         <DoubleAnimation.EasingFunction>
                             <QuadraticEase EasingMode="EaseOut"/>
                         </DoubleAnimation.EasingFunction>
@@ -36,14 +43,14 @@
     <Grid>
         <Grid MouseLeftButtonDown="DragWindow" Background="Transparent"/>
 
-        <Canvas Height="70" Margin="100,65,101,215" MouseLeftButtonDown="DragWindow">
+        <Canvas x:Name="LogoCanvas" MouseLeftButtonDown="DragWindow" VerticalAlignment="Top" Height="70" Margin="100,65,101,215" Panel.ZIndex="1">
             <Label
-                Content="UnGate"
-                FontFamily="Segoe UI"
-                FontWeight="Bold"
-                FontSize="59"
-                Foreground="White"
-                Background="Transparent" HorizontalAlignment="Center" Height="76" VerticalAlignment="Top" />
+            Content="UnGate"
+            FontFamily="Segoe UI"
+            FontWeight="Bold"
+            FontSize="59"
+            Foreground="White"
+            Background="Transparent" HorizontalAlignment="Center" Height="76" VerticalAlignment="Top" />
             <Path Canvas.Left="220" Height="70" Stretch="Fill" Width="70" HorizontalAlignment="Left" VerticalAlignment="Center">
                 <Path.Fill>
                     <SolidColorBrush Color="White"/>
@@ -64,6 +71,16 @@
                 </Path.Data>
             </Path>
         </Canvas>
+        <Image x:Name="LoadingGIF"
+            Source="load.gif"
+            Width="48" Height="48"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,77,0,0"
+            Visibility="Collapsed"
+            Opacity="1"
+            IsHitTestVisible="False"
+            Panel.ZIndex="2"/>
 
         <Label
             Content="✕"
@@ -79,6 +96,67 @@
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <ColorAnimation Duration="0:0:0.1" To="Coral" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="White" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <Label
+            Content="—"
+            FontWeight="ExtraBold" FontSize="16" Foreground="White"
+            Height="30" Width="30" Padding="0" Margin="0,3,35,0"
+            HorizontalAlignment="Right" VerticalAlignment="Top"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            MouseLeftButtonUp="MinimizeWindow">
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="Goldenrod" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="White" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <Label
+            Content="ⓘ"
+            FontSize="20" Foreground="White"
+            Height="30" Width="30" Padding="0" Margin="5"
+            HorizontalAlignment="Left" VerticalAlignment="Top" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            MouseLeftButtonUp="Info">
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="CornflowerBlue" Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
@@ -229,4 +307,78 @@
         <Label MouseLeftButtonDown="DragWindow" Visibility="Hidden" FontFamily="Bahnschrift" x:Name="PatchStateLabel" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="5"/>
         <Label MouseLeftButtonDown="DragWindow" FontFamily="Bahnschrift" Foreground="White" x:Name="VersionLabel" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5" />
     </Grid>
+
+    <Window.Resources>
+        <!-- Fade out LogoCanvas -->
+        <Storyboard x:Key="FadeLogoOut">
+            <DoubleAnimation Storyboard.TargetName="LogoCanvas"
+                         Storyboard.TargetProperty="Opacity"
+                         To="0.3" Duration="0:0:0.3"/>
+        </Storyboard>
+        <!-- Fade in LogoCanvas -->
+        <Storyboard x:Key="FadeLogoIn">
+            <DoubleAnimation Storyboard.TargetName="LogoCanvas"
+                         Storyboard.TargetProperty="Opacity"
+                         To="1" Duration="0:0:0.3"/>
+        </Storyboard>
+        <!-- Fade in LoadingGIF -->
+        <Storyboard x:Key="FadeLoadingIn">
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="LoadingGIF"
+                                  Storyboard.TargetProperty="Visibility"
+                                  Duration="0:0:0">
+                <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="LoadingGIF"
+                     Storyboard.TargetProperty="Opacity"
+                     To="1" Duration="0:0:0.3"/>
+        </Storyboard>
+        <Storyboard x:Key="FadeLoadingOut">
+            <DoubleAnimation Storyboard.TargetName="LoadingGIF"
+                     Storyboard.TargetProperty="Opacity"
+                     To="0" Duration="0:0:0.3"/>
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="LoadingGIF"
+                                  Storyboard.TargetProperty="Visibility"
+                                  BeginTime="0:0:0.3">
+                <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+            </ObjectAnimationUsingKeyFrames>
+        </Storyboard>
+
+        <Storyboard x:Key="FadeInWindow">
+            <DoubleAnimation
+        Storyboard.TargetProperty="Opacity"
+        To="1"
+        Duration="0:0:0.2">
+                <DoubleAnimation.EasingFunction>
+                    <QuadraticEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+        
+        <Storyboard x:Key="FadeOutWindow">
+            <DoubleAnimation
+Storyboard.TargetProperty="Opacity"
+To="0" Duration="0:0:0.2">
+                <DoubleAnimation.EasingFunction>
+                    <QuadraticEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+        
+        <Storyboard x:Key="SlideOutWindow">
+            <DoubleAnimation 
+        Storyboard.TargetProperty="(Window.Top)"
+        To="450" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <QuadraticEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation
+        Storyboard.TargetProperty="Opacity"
+        To="0" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <QuadraticEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </Window.Resources>
 </Window>

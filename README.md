@@ -1,9 +1,24 @@
-# UnGate11
+<img src="Banner.png">  
 
-A program that patches Windows in such a way that it removes the install restrictions for Windows 11, be it installing through settings or an iso.
+## UnGate11 is a program with a (kinda) full GUI that 'patches' Windows
+## in such a way that it removes the install restrictions for Windows 11,
+## be it installing through settings or an iso.
 
-first build. yay!
+By patching, I mean it modifies the registry and some system files
+in order to make Windows think it's running on a supported system.
+This project is open source and free to use,
+but please consider starring the repo if you find it useful.
 
-it works fine ig, but im looking to fix some things, such ass the cmd window popups
+This program is meant to be used for updating **existing** Windows installations to Windows 11 on unsupported hardware.
+The supported installations/operating systems are Windows 10 version 2004 and later, and all Windows 11 versions.
+(Also useful when updating to a newer version of Windows 11; for example, from 24H2 to 25H2)
 
-theres also sooo much garbage code
+If you wish to install Windows 11 on unsupported hardware from scratch,
+I reccomend using an amazing tool called [Rufus](https://rufus.ie/)
+in order to create a bootable USB drive that bypasses the restrictions,
+and can even remove the need for a Microsoft account, BitLocker, and more!
+
+The pre-built EXE program is available in the [Releases](https://github.com/DynamiByte/UnGate11/releases)
+No installation is needed, just run it and you're all good to go!
+
+As of now, the current version of the program is **v0.2.0**.
