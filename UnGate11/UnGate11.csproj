@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
-	<!-- NEEDS at least Windows 10 version 2004 (aka May 2020 Update or 20H1)-->
 	<SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <AssemblyName>UnGate11</AssemblyName>
@@ -16,7 +15,7 @@
     <RepositoryUrl>https://github.com/DynamiByte/UnGate11</RepositoryUrl>
     <Description>UnGate11, a tool used to remove the Windows 11 install requirements.</Description>
     <SignAssembly>false</SignAssembly>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Copyright>©2025</Copyright>
     <PackageId>UnGate11</PackageId>
@@ -43,8 +42,6 @@
     <Reference Include="Microsoft.VisualBasic" />
     <Resource Include="bg.png" />
     <EmbeddedResource Include="load.gif" />
-    <EmbeddedResource Include="Patcher.cmd" />
-	<EmbeddedResource Include="Refresh.cmd" />
 	<None Include="app.manifest" />
     <None Include="..\README.md">
       <Pack>True</Pack>

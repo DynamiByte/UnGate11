@@ -1,234 +1,288 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Pipes;
 using System.Linq;
+using System.Media;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace UnGate11
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, IDisposable
     {
-        private string _status;
-        private bool _done = true;
-        private int _ticks;
+        // Constants
+        private const int INVALID_CLICK_THRESHOLD = 3;
+        private const int BUTTON_CONTENT_DELAY_MS = 2000;
+        private const int TASK_COMPLETION_DELAY_MS = 500;
+        private const double GIF_FRAME_DELAY_MS = 24;
+        
 
+        // Fields
+        // GIF animation
         private BitmapDecoder _gifDecoder;
-        private int _gifFrameIndex = 0;
+        private int _gifFrameIndex;
         private DispatcherTimer _gifTimer;
+        private DispatcherTimer _delayTimer;
 
-        private const string PipeName = "UnGate11Pipe";
-        private CancellationTokenSource _pipeCts;
+        // State management
+        private string _currentPatchState = "idkbruh";
+        private bool _interactionEnabled = true;
+        private int _invalidClickCount = 0;
+        private bool _disposed = false;
 
-        private string _currentPatchState = "unpatched"; // Default, will be updated by ListenPipe
+        // System helper
+        private readonly WindowsSystemHelper _systemHelper;
 
-        private event Action<string> PipeLineReceived;
+        // UI elements
+        private TextBlock _progressTextBlock;
 
+        // Cached storyboards
+        private Storyboard _fadeLogoIn, _fadeLogoOut;
+        private Storyboard _fadeLoadingIn, _fadeLoadingOut;
+        private Storyboard _fadePatchButtonIn, _fadePatchButtonOut;
+        private Storyboard _fadeRefreshButtonIn, _fadeRefreshButtonOut;
+        
+
+        // Constructor and Initialization
         public MainWindow()
         {
             InitializeComponent();
-            VersionLabel.Content = $"v{GetVersion().Major}.{GetVersion().Minor}.{GetVersion().Build}";
-            SetStatus("ready");
+            InitializeProgressTextBlock();
+            CacheStoryboards();
 
-            this.StateChanged += MainWindow_StateChanged;
+            // Initialize system helper directly in constructor
+            _systemHelper = new WindowsSystemHelper();
+            _systemHelper.PatchStatusChecked += SystemHelper_PatchStatusChecked;
+            _systemHelper.PatchActionCompleted += SystemHelper_PatchActionCompleted;
+            _systemHelper.WindowsUpdateRefreshed += SystemHelper_WindowsUpdateRefreshed;
+            _systemHelper.ProgressReported += SystemHelper_ProgressReported;
 
-            // Set default text at startup
+            InitializeVersionLabel();
+
+            StateChanged += MainWindow_StateChanged;
             PatchButton.Content = "Checking Patch State...";
 
-            // Extract embedded CMD resource to temp file and launch Patcher.cmd
-            string tempCheckCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Patcher.cmd");
-            try
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                string checkResourceName = assembly.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("Patcher.cmd", StringComparison.OrdinalIgnoreCase));
-                using (var stream = assembly.GetManifestResourceStream(checkResourceName))
-                using (var file = new FileStream(tempCheckCmdPath, FileMode.Create, FileAccess.Write))
-                {
-                    stream.CopyTo(file);
-                }
-                try
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = tempCheckCmdPath,
-                        UseShellExecute = true,
-                        CreateNoWindow = false
-                    };
-                        Process.Start(psi);
-                }
-                catch (Exception ex)
-                {
-                }
-                // Optionally delete the temp file after a delay
-                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempCheckCmdPath); } catch { } });
-            }
-            catch (Exception ex)
-            {
-            }
+            // Check patch status using helper
+            Task.Run(async () => await _systemHelper.CheckPatchStatus());
 
-            // Start the named pipe server for status updates from the script
-            _pipeCts = new CancellationTokenSource();
-            Task.Run(() => ListenPipe(_pipeCts.Token));
-
+            // Start loading animation
+            StartTask(null);
         }
 
-        private void ListenPipe(CancellationToken token)
+        private void InitializeProgressTextBlock()
         {
-            while (!token.IsCancellationRequested)
+            _progressTextBlock = new TextBlock
             {
-                try
-                {
-                    using (var pipeServer = new NamedPipeServerStream(PipeName, PipeDirection.In))
-                    using (var reader = new StreamReader(pipeServer))
-                    {
-                        pipeServer.WaitForConnection();
-                        string line;
-                        while ((line = reader.ReadLine()) != null)
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                PipeLineReceived?.Invoke(line); // Raise event for external handlers
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center,
+                Foreground = Brushes.White,
+                FontSize = 14,
+                Opacity = 0,
+                Visibility = Visibility.Collapsed,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 300,
+                Margin = new Thickness(0, -50, 0, 0)
+            };
 
-                                if (line == "C1")
-                                {
-                                    SetStatus("unpatched");
-                                    _currentPatchState = "unpatched";
-                                    PatchButton.Content = "Patch";
-                                }
-                                else if (line == "C0")
-                                {
-                                    SetStatus("patched");
-                                    _currentPatchState = "patched";
-                                    PatchButton.Content = "Unpatch";
-                                }
-                                else if (line == "P0")
-                                {
-                                    // Load ani
-                                    ((Storyboard)FindResource("FadeLoadingOut")).Begin();
-                                    StopLoadingGIF();
-                                    ((Storyboard)FindResource("FadeLogoIn")).Begin();
-                                    SetStatus("patched");
-                                    _currentPatchState = "patched";
-                                    PatchButton.Content = "Patch Applied";
-                                    Task.Run(async () =>
-                                    {
-                                        await Task.Delay(3000);
-                                        Dispatcher.Invoke(() => PatchButton.Content = "Unpatch");
-                                    });
-                                }
-                                else if (line == "P1")
-                                {
-                                    // Load ani
-                                    ((Storyboard)FindResource("FadeLoadingOut")).Begin();
-                                    StopLoadingGIF();
-                                    ((Storyboard)FindResource("FadeLogoIn")).Begin();
-                                    SetStatus("unpatched");
-                                    _currentPatchState = "unpatched";
-                                    PatchButton.Content = "Patch Removed";
-                                    Task.Run(async () =>
-                                    {
-                                        await Task.Delay(3000);
-                                        Dispatcher.Invoke(() => PatchButton.Content = "Patch");
-                                    });
-                                }
-                                else if (line == "WUR")
-                                {
-                                    //Load ani
-                                    ((Storyboard)FindResource("FadeLoadingOut")).Begin();
-                                    StopLoadingGIF();
-                                    ((Storyboard)FindResource("FadeLogoIn")).Begin();
-                                    UpdateRefreshButton.Content = "Refreshed";
-                                    Task.Run(async () =>
-                                    {
-                                        await Task.Delay(3000);
-                                        Dispatcher.Invoke(() => UpdateRefreshButton.Content = "Refresh Windows Update");
-                                    });
-                                }
-                                else
-                                {
-                                    PatchButton.Content = "Patch";
-                                }
-                            });
-                        }
-                    }
-                }
-                catch
-                {
-                    // Optionally log or handle errors
-                }
+            if (Content is Grid mainGrid)
+            {
+                mainGrid.Children.Add(_progressTextBlock);
             }
         }
 
-        private void SetStatus(string status)
+        private void CacheStoryboards()
         {
-            //if (status == "done" || status == "ready")
-            //{
-            //    _done = true;
-            //    _status = string.Empty;
-            //    _ticks = 0;
-            //    Application.Current.Dispatcher.Invoke(DispatcherPriority.Render, new Action(() => PatchButton.Content = "Patch"));
+            _fadeLogoIn = (Storyboard)FindResource("FadeLogoIn");
+            _fadeLogoOut = (Storyboard)FindResource("FadeLogoOut");
+            _fadeLoadingIn = (Storyboard)FindResource("FadeLoadingIn");
+            _fadeLoadingOut = (Storyboard)FindResource("FadeLoadingOut");
+            _fadePatchButtonIn = (Storyboard)FindResource("FadePatchButtonIn");
+            _fadePatchButtonOut = (Storyboard)FindResource("FadePatchButtonOut");
+            _fadeRefreshButtonIn = (Storyboard)FindResource("FadeRefreshButtonIn");
+            _fadeRefreshButtonOut = (Storyboard)FindResource("FadeRefreshButtonOut");
+        }
 
-            if ( status == "patched")
+        private void InitializeVersionLabel()
+        {
+            var version = GetVersion();
+            VersionLabel.Content = $"v{version.Major}.{version.Minor}.{version.Build}";
+        }
+        
+
+        // System Helper Event Handlers
+        private void SystemHelper_PatchStatusChecked(object sender, WindowsSystemHelper.StatusEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
             {
-                _done = true;
-                _status = string.Empty;
-                _ticks = 0;
-                Application.Current.Dispatcher.Invoke(DispatcherPriority.Render, new Action(() => PatchButton.Content = "Unpatch"));
+                switch (e.StatusCode)
+                {
+                    case "C1":
+                        PatchButton.Content = "Patch";
+                        _currentPatchState = "unpatched";
+                        EndTask();
+                        break;
+                    case "C0":
+                        PatchButton.Content = "Unpatch";
+                        _currentPatchState = "patched";
+                        EndTask();
+                        break;
+                    default:
+                        PatchButton.Content = "Patch";
+                        EndTask();
+                        break;
+                }
+            });
+        }
+
+        private void SystemHelper_PatchActionCompleted(object sender, WindowsSystemHelper.StatusEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                switch (e.StatusCode)
+                {
+                    case "P0":
+                        _currentPatchState = "patched";
+                        PatchButton.Content = "Patch Applied";
+                        DelayedContent(PatchButton, "Unpatch", BUTTON_CONTENT_DELAY_MS);
+                        EndTask();
+                        break;
+                    case "P1":
+                        _currentPatchState = "unpatched";
+                        PatchButton.Content = "Patch Removed";
+                        DelayedContent(PatchButton, "Patch", BUTTON_CONTENT_DELAY_MS);
+                        EndTask();
+                        break;
+                    default:
+                        EndTask();
+                        break;
+                }
+            });
+        }
+
+        private void SystemHelper_WindowsUpdateRefreshed(object sender, WindowsSystemHelper.StatusEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (e.StatusCode == "WUR")
+                {
+                    UpdateRefreshButton.Content = "Refreshed";
+                    DelayedContent(UpdateRefreshButton, "Refresh Windows Update", BUTTON_CONTENT_DELAY_MS);
+                    EndTask();
+                }
+            });
+        }
+
+        private void SystemHelper_ProgressReported(object sender, WindowsSystemHelper.ProgressEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _progressTextBlock.Text = e.Message;
+            });
+        }
+        
+
+        // Task Management
+        private void SetInteractionEnabled(bool state)
+        {
+            _interactionEnabled = state;
+            PatchButton.IsEnabled = state;
+            UpdateRefreshButton.IsEnabled = state;
+        }
+
+        private void EndTask()
+        {
+            if (_delayTimer == null)
+            {
+                _delayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(TASK_COMPLETION_DELAY_MS) };
             }
-            else if (status == "unpatched")
+
+            _delayTimer.Tick += OnEndTaskDelay;
+            _delayTimer.Start();
+        }
+
+        private void OnEndTaskDelay(object sender, EventArgs e)
+        {
+            _delayTimer.Stop();
+            _delayTimer.Tick -= OnEndTaskDelay;
+
+            _fadeLogoIn.Begin();
+            _fadeLoadingOut.Begin();
+            _fadePatchButtonIn.Begin();
+            _fadeRefreshButtonIn.Begin();
+
+            _progressTextBlock.Visibility = Visibility.Collapsed;
+            _progressTextBlock.Opacity = 0;
+
+            StopLoadingGIF();
+            SetInteractionEnabled(true);
+            _invalidClickCount = 0;
+        }
+
+        private void StartTask(string type)
+        {
+            if (type == "patch")
             {
-                _done = true;
-                _status = string.Empty;
-                _ticks = 0;
-                Application.Current.Dispatcher.Invoke(DispatcherPriority.Render, new Action(() => PatchButton.Content = "Patch"));
+                PatchButton.Content = _currentPatchState == "unpatched" ? "Patching" : "Unpatching";
+                _progressTextBlock.Visibility = Visibility.Visible;
+                _progressTextBlock.Opacity = 1;
+                _progressTextBlock.Text = _currentPatchState == "unpatched" ?
+                    "Preparing to apply Windows 11 TPM bypass patch..." :
+                    "Preparing to remove Windows 11 TPM bypass patch...";
+            }
+            else if (type == "refresh")
+            {
+                UpdateRefreshButton.Content = "Refreshing";
+                _progressTextBlock.Visibility = Visibility.Visible;
+                _progressTextBlock.Opacity = 1;
+                _progressTextBlock.Text = "Starting Windows Update refresh...";
             }
             else
             {
-                _done = false;
-                _status = status;
+                _progressTextBlock.Visibility = Visibility.Collapsed;
+                _progressTextBlock.Opacity = 0;
             }
-            Console.WriteLine("[Status] " + status);
+
+            SetInteractionEnabled(false);
+            _fadeLogoOut.Begin();
+            _fadePatchButtonOut.Begin();
+            _fadeRefreshButtonOut.Begin();
+            _fadeLoadingIn.Begin();
+            StartLoadingGIF();
+        }
+
+        private async void DelayedContent(ContentControl control, object content, int delayMs)
+        {
+            await Task.Delay(delayMs).ConfigureAwait(false);
+            await Dispatcher.InvokeAsync(() => control.Content = content);
+        }
+        
+
+        // GIF Animation
+        private void LoadGifDecoder()
+        {
+            if (_gifDecoder != null) return;
+
+            string tempGIFPath = Path.Combine(Path.GetTempPath(), "load.gif");
+            if (!File.Exists(tempGIFPath))
+                ExtractResourceToFile("load.gif", tempGIFPath);
+
+            using (var fileStream = new FileStream(tempGIFPath, FileMode.Open, FileAccess.Read))
+            {
+                _gifDecoder = BitmapDecoder.Create(fileStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            }
         }
 
         private void StartLoadingGIF()
         {
-            // Use temp path for GIF
-            string tempGIFPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "load.gif");
-
-            // Extract embedded GIF resource to temp file if not already present
-            if (!File.Exists(tempGIFPath))
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                string gifResourceName = assembly.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("load.gif", StringComparison.OrdinalIgnoreCase));
-                if (gifResourceName == null)
-                {
-                    //MessageBox.Show("Could not find load.gif as an embedded resource.");
-                    return;
-                }
-                using (var stream = assembly.GetManifestResourceStream(gifResourceName))
-                using (var file = new FileStream(tempGIFPath, FileMode.Create, FileAccess.Write))
-                {
-                    stream.CopyTo(file);
-                }
-            }
-
-            // Load GIF from temp file
-            if (_gifDecoder == null)
-            {
-                using (var fileStream = new FileStream(tempGIFPath, FileMode.Open, FileAccess.Read))
-                {
-                    _gifDecoder = BitmapDecoder.Create(fileStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
-                }
-            }
+            LoadGifDecoder();
 
             _gifFrameIndex = 0;
             LoadingGIF.Source = _gifDecoder.Frames[_gifFrameIndex];
@@ -237,185 +291,123 @@ namespace UnGate11
 
             if (_gifTimer == null)
             {
-                _gifTimer = new DispatcherTimer();
-                _gifTimer.Interval = TimeSpan.FromMilliseconds(24);
-                _gifTimer.Tick += (s, e) =>
+                _gifTimer = new DispatcherTimer(DispatcherPriority.Render)
                 {
-                    _gifFrameIndex = (_gifFrameIndex + 1) % _gifDecoder.Frames.Count;
-                    LoadingGIF.Source = _gifDecoder.Frames[_gifFrameIndex];
+                    Interval = TimeSpan.FromMilliseconds(GIF_FRAME_DELAY_MS)
                 };
+                _gifTimer.Tick += GifTimer_Tick;
             }
             _gifTimer.Start();
         }
+
+        private void GifTimer_Tick(object sender, EventArgs e)
+        {
+            _gifFrameIndex = (_gifFrameIndex + 1) % _gifDecoder.Frames.Count;
+            LoadingGIF.Source = _gifDecoder.Frames[_gifFrameIndex];
+        }
+
         private void StopLoadingGIF()
         {
-            if (_gifTimer != null)
-                _gifTimer.Stop();
+            _gifTimer?.Stop();
             LoadingGIF.Visibility = Visibility.Collapsed;
             LoadingGIF.Opacity = 0;
         }
+        
 
-        // Left click: Run patcher
-
+        // Event Handlers
         private async void PatchButton_Left(object sender, MouseButtonEventArgs e)
         {
-            if (!_done) return;
-
-            // Fade out logo and show loading gif
-            ((Storyboard)FindResource("FadeLogoOut")).Begin();
-            ((Storyboard)FindResource("FadeLoadingIn")).Begin();
-            StartLoadingGIF();
-
-            // Set button content to "Patching" or "Unpatching" based on current state
-            if (_currentPatchState == "unpatched")
-                PatchButton.Content = "Patching";
-            else
-                PatchButton.Content = "Unpatching";
-
-            SetStatus("patching");
-
-            // Run patch operation asynchronously
-            string tempPatcherCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Patcher.cmd");
-            await Task.Run(() =>
+            if (!PatchButton.IsEnabled)
             {
-                try
-                {
-                    var assembly = Assembly.GetExecutingAssembly();
-                    string resourceName = assembly.GetManifestResourceNames()
-                        .FirstOrDefault(n => n.EndsWith("Patcher.cmd", StringComparison.OrdinalIgnoreCase));
-                    if (resourceName == null)
-                    {
-                        Dispatcher.Invoke(() => SetStatus("done"));
-                        return;
-                    }
-                    using (var stream = assembly.GetManifestResourceStream(resourceName))
-                    using (var file = new FileStream(tempPatcherCmdPath, FileMode.Create, FileAccess.Write))
-                    {
-                        stream.CopyTo(file);
-                    }
-                }
-                catch (Exception)
-                {
-                    Dispatcher.Invoke(() => SetStatus("done"));
-                    return;
-                }
-
-                try
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = tempPatcherCmdPath,
-                        Arguments = "patch",
-                        UseShellExecute = true,
-                        CreateNoWindow = false
-                    };
-                    Process.Start(psi);
-                }
-                catch (Exception)
-                {
-                }
-            });
-
-            // Set up deletion after receiving "P0" or "P1" from pipe
-            void DeleteCmdFileAfterPatch(string line)
-            {
-                if ((line == "P0" || line == "P1") && File.Exists(tempPatcherCmdPath))
-                {
-                    Task.Run(async () =>
-                    {
-                        await Task.Delay(1000);
-                        try { File.Delete(tempPatcherCmdPath); } catch { }
-                    });
-                }
+                HandleInvalidButtonClick(PatchButton);
+                return;
             }
+            StartTask("patch");
 
-            // Attach to ListenPipe event via a delegate
-            Action<string> pipeLineHandler = null;
-            pipeLineHandler = (line) =>
-            {
-                DeleteCmdFileAfterPatch(line);
-                // Detach after first match
-                if (line == "P0" || line == "P1")
-                {
-                    PipeLineReceived -= pipeLineHandler;
-                }
-            };
-
-            PipeLineReceived += pipeLineHandler;
-
-            SetStatus("done");
+            await _systemHelper.ApplyPatch();
         }
 
-        // Right click: do nothing, but required by XAML
         private void PatchButton_Right(object sender, MouseButtonEventArgs e)
         {
-            // No-op, but required for XAML compatibility
+            // Reserved for future functionality
         }
 
-        private void UpdateRefreshButton_Left(object sender, MouseButtonEventArgs e)
+        private async void UpdateRefreshButton_Left(object sender, MouseButtonEventArgs e)
         {
-            if (!_done) return;
-
-            ((Storyboard)FindResource("FadeLogoOut")).Begin();
-            ((Storyboard)FindResource("FadeLoadingIn")).Begin();
-            StartLoadingGIF();
-
-            UpdateRefreshButton.Content = "Refreshing";
-
-            // Extract embedded CMD resource to temp file
-            string tempPatcherCmdPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Refresh.cmd");
-            try
+            if (!UpdateRefreshButton.IsEnabled)
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                string resourceName = assembly.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("Refresh.cmd", StringComparison.OrdinalIgnoreCase));
-                if (resourceName == null)
-                {
-                    SetStatus("done");
-                    return;
-                }
-                using (var stream = assembly.GetManifestResourceStream(resourceName))
-                using (var file = new FileStream(tempPatcherCmdPath, FileMode.Create, FileAccess.Write))
-                {
-                    stream.CopyTo(file);
-                }
-            }
-            catch (Exception ex)
-            {
-                SetStatus("done");
+                HandleInvalidButtonClick(UpdateRefreshButton);
                 return;
             }
 
-            try
-            {
-                // Start the CMD file with the same permissions as the app (no elevation, no output redirection)
-                var psi = new ProcessStartInfo
-                {
-                    FileName = tempPatcherCmdPath,
-                    UseShellExecute = true,
-                    CreateNoWindow = false
-                };
-                Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-            }
-            finally
-            {
-                // Optionally delete the temp file after a delay, idk
-                // Task.Delay(10000).ContinueWith(_ => { try { File.Delete(tempPatcherCmdPath); } catch { } });
-            }
+            StartTask("refresh");
 
-            SetStatus("done");
+            await _systemHelper.RefreshWindowsUpdate();
         }
 
-        // smae bae
         private void UpdateRefreshButton_Right(object sender, MouseButtonEventArgs e)
         {
-            // No-op, but required for XAML compatibility
+            // Reserved for future functionality
         }
 
-        private Version GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
+        private void CloseWindow(object sender, MouseButtonEventArgs e)
+        {
+            if (!_interactionEnabled)
+            {
+                HandleInvalidCloseClick();
+                return;
+            }
+
+            var storyboard = (Storyboard)FindResource("SlideOutWindow");
+            storyboard.Completed += (s, args) =>
+            {
+                Application.Current.Shutdown();
+            };
+            storyboard.Begin(this);
+        }
+
+        private void HandleInvalidButtonClick(ContentControl button)
+        {
+            _invalidClickCount++;
+            PlayErrorSound();
+            if (_invalidClickCount >= INVALID_CLICK_THRESHOLD)
+            {
+                MessageBox.Show("You can't do that right now. Please wait until the current task is finished.", "Wait", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _invalidClickCount = 0;
+            }
+        }
+
+        private void HandleInvalidCloseClick()
+        {
+            _invalidClickCount++;
+            PlayErrorSound();
+            WiggleWindow();
+            if (_invalidClickCount >= INVALID_CLICK_THRESHOLD)
+            {
+                MessageBox.Show("You can't close the window right now. Please wait until current task is finished.\nIf you really want to close it anyway, right-click the close button.", "Wait", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _invalidClickCount = 0;
+            }
+        }
+
+        private void WiggleWindow()
+        {
+            var wiggle = new DoubleAnimationUsingKeyFrames
+            {
+                Duration = TimeSpan.FromMilliseconds(400)
+            };
+            wiggle.KeyFrames.Add(new EasingDoubleKeyFrame(Left, KeyTime.FromPercent(0)));
+            wiggle.KeyFrames.Add(new EasingDoubleKeyFrame(Left - 10, KeyTime.FromPercent(0.2)));
+            wiggle.KeyFrames.Add(new EasingDoubleKeyFrame(Left + 10, KeyTime.FromPercent(0.4)));
+            wiggle.KeyFrames.Add(new EasingDoubleKeyFrame(Left - 7, KeyTime.FromPercent(0.6)));
+            wiggle.KeyFrames.Add(new EasingDoubleKeyFrame(Left, KeyTime.FromPercent(1)));
+
+            Storyboard.SetTarget(wiggle, this);
+            Storyboard.SetTargetProperty(wiggle, new PropertyPath("Left"));
+
+            var sb = new Storyboard();
+            sb.Children.Add(wiggle);
+            sb.Begin();
+        }
 
         private void MainWindow_StateChanged(object sender, EventArgs e)
         {
@@ -426,17 +418,6 @@ namespace UnGate11
             }
         }
 
-        private void CloseWindow(object sender, MouseButtonEventArgs e)
-        {
-            var storyboard = (Storyboard)FindResource("SlideOutWindow");
-            storyboard.Completed += (s, args) =>
-            {
-                _pipeCts?.Cancel();
-            Application.Current.Shutdown();
-            };
-            storyboard.Begin(this);
-        }
-
         private void MinimizeWindow(object sender, MouseButtonEventArgs e)
         {
             var storyboard = (Storyboard)FindResource("FadeOutWindow");
@@ -444,19 +425,76 @@ namespace UnGate11
             {
                 WindowState = WindowState.Minimized;
                 Opacity = 1;
-                //visible.Begin(this);
             };
             storyboard.Begin(this);
         }
-        private void Info(object sender, MouseButtonEventArgs e)
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://github.com/DynamiByte/UnGate11/blob/master/README.md",
-                UseShellExecute = true
-            });
-        }
+
+        private void Info(object sender, MouseButtonEventArgs e) => Process.Start(new ProcessStartInfo { FileName = "https://github.com/DynamiByte/UnGate11/blob/master/README.md" });
 
         private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();
+
+        private void PlayErrorSound() => SystemSounds.Hand.Play();
+
+        private Version GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
+        
+
+        // Resource Management
+        private void ExtractResourceToFile(string resourceFileName, string destinationPath)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            string resourceName = assembly.GetManifestResourceNames()
+                .FirstOrDefault(n => n.EndsWith(resourceFileName, StringComparison.OrdinalIgnoreCase));
+            if (resourceName == null) return;
+
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            using (var file = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
+            {
+                stream.CopyTo(file);
+            }
+        }
+        
+
+        // IDisposable Implementation
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    if (_gifTimer != null)
+                    {
+                        _gifTimer.Stop();
+                        _gifTimer.Tick -= GifTimer_Tick;
+                        _gifTimer = null;
+                    }
+
+                    if (_delayTimer != null)
+                    {
+                        _delayTimer.Stop();
+                        _delayTimer = null;
+                    }
+
+                    _gifDecoder = null;
+
+                    // Unsubscribe from events
+                    if (_systemHelper != null)
+                    {
+                        _systemHelper.PatchStatusChecked -= SystemHelper_PatchStatusChecked;
+                        _systemHelper.PatchActionCompleted -= SystemHelper_PatchActionCompleted;
+                        _systemHelper.WindowsUpdateRefreshed -= SystemHelper_WindowsUpdateRefreshed;
+                        _systemHelper.ProgressReported -= SystemHelper_ProgressReported;
+                    }
+                }
+                _disposed = true;
+            }
+        }
+        
     }
 }
