@@ -27,4 +27,4 @@ in order to create a bootable USB drive that bypasses the restrictions, and can 
 The pre-built EXE program is available in the [Releases](https://github.com/DynamiByte/UnGate11/releases)
 No installation is needed, just run it and you're all good to go!
 
-As of now, the current version of the program is **v0.3.0**.
+As of now, the current version of the program is **v0.3.1**.
