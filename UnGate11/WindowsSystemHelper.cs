@@ -2,26 +2,17 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Security.Principal;
-using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace UnGate11
 {
     public class WindowsSystemHelper
     {
         // Events for Status Communication
-        // Event to communicate patch status check results
         public event EventHandler<StatusEventArgs> PatchStatusChecked;
-
-        // Event to communicate patch application/removal results
         public event EventHandler<StatusEventArgs> PatchActionCompleted;
-
-        // Event to communicate Windows Update refresh completion
         public event EventHandler<StatusEventArgs> WindowsUpdateRefreshed;
-
-        // Event to communicate progress updates
         public event EventHandler<ProgressEventArgs> ProgressReported;
 
         // Status event arguments class
@@ -57,38 +48,20 @@ namespace UnGate11
         {
             ProgressReported?.Invoke(this, new ProgressEventArgs(message));
         }
-        
-
-        // Native Methods
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern uint GetFileAttributes(string lpFileName);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool SetFileAttributes(string lpFileName, uint dwFileAttributes);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr GetCurrentProcess();
-
-        private const uint FILE_ATTRIBUTE_READONLY = 0x1;
-        private const uint FILE_ATTRIBUTE_HIDDEN = 0x2;
-        private const uint FILE_ATTRIBUTE_SYSTEM = 0x4;
 
         // Patch Check and Application
         public async Task CheckPatchStatus()
         {
             try
             {
-                ReportProgress("Checking patch status...");
+                // Define registry path constant
+                const string ifeoPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options";
 
-                // Check if patch is applied using Image File Execution Options
+                // Check if the patch is applied by looking for the Debugger value in the registry
+                string setupHostDebuggerPath = $@"{ifeoPath}\SetupHost.exe\0";
                 bool isPatchApplied = false;
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\SetupHost.exe\0"))
+
+                using (var key = Registry.LocalMachine.OpenSubKey(setupHostDebuggerPath))
                 {
                     if (key != null && key.GetValue("Debugger") != null)
                     {
@@ -96,142 +69,137 @@ namespace UnGate11
                     }
                 }
 
-                // Notify listeners of the result
                 await Task.Run(() => RaiseStatusEvent(PatchStatusChecked, isPatchApplied ? "C0" : "C1"));
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error checking patch status: {ex.Message}");
+                MessageBox.Show($"Error checking patch status: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await Task.Run(() => RaiseStatusEvent(PatchStatusChecked, "C1")); // Default to unpatched on error
             }
         }
 
         public async Task ApplyPatch()
         {
+            var startTime = DateTime.UtcNow;
             try
             {
+                // First check if patch is already applied
+                bool isPatchApplied = false;
+                const string ifeoPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options";
+                string setupHostDebuggerPath = $@"{ifeoPath}\SetupHost.exe\0";
 
-                // Check current status
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\SetupHost.exe\0"))
+                using (var key = Registry.LocalMachine.OpenSubKey(setupHostDebuggerPath))
                 {
                     if (key != null && key.GetValue("Debugger") != null)
                     {
-                        ReportProgress("Removing existing patch...");
-                        await RemovePatch();
-                        return;
+                        isPatchApplied = true;
                     }
                 }
 
-                // Install the patch
-                ReportProgress("Creating patch directory...");
-                string scriptDir = Path.Combine(Environment.GetEnvironmentVariable("SystemDrive"), "Scripts");
-                Directory.CreateDirectory(scriptDir);
-
-                ReportProgress("Writing patch script...");
-                string scriptFile = Path.Combine(scriptDir, "get11.cmd");
-                string scriptContent = CreatePatchCmdContent();
-
-                // Write the script file
-                File.WriteAllText(scriptFile, scriptContent, Encoding.ASCII);
-
-                ReportProgress("Setting up registry entries...");
-                // Set registry keys for patch
-                using (RegistryKey ifeoKey = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\SetupHost.exe"))
+                if (isPatchApplied)
                 {
-                    ifeoKey.SetValue("UseFilter", 1, RegistryValueKind.DWord);
+                    // Wait a second if the operation was too fast to ensure UI consistency
+                    var elapsed = DateTime.UtcNow - startTime;
+                    if (elapsed.TotalMilliseconds < 1000)
+                        await Task.Delay(1000 - (int)elapsed.TotalMilliseconds);
+
+                    await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "P0"));
+                    return;
                 }
 
-                using (RegistryKey ifeoSubKey = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\SetupHost.exe\0"))
+                // Get the system drive
+                string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+                string scriptsDir = $@"{systemDrive}\Scripts";
+                string scriptPath = $@"{scriptsDir}\get11.cmd";
+
+                // Create Scripts directory if it doesn't exist
+                if (!Directory.Exists(scriptsDir))
                 {
-                    ifeoSubKey.SetValue("FilterFullPath", $@"{Environment.GetEnvironmentVariable("SystemDrive")}\$WINDOWS.~BT\Sources\SetupHost.exe");
-                    ifeoSubKey.SetValue("Debugger", scriptFile);
+                    Directory.CreateDirectory(scriptsDir);
                 }
 
-                ReportProgress("Configuring TPM bypass registry keys...");
-                // Set TPM bypass registry keys
-                using (RegistryKey wuKey = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"))
+                // Create the script file with patch content
+                File.WriteAllText(scriptPath, CreatePatchCmdContent());
+
+                // Add registry entries
+                using (var baseKey = Registry.LocalMachine.CreateSubKey($@"{ifeoPath}\SetupHost.exe"))
                 {
-                    wuKey.SetValue("DisableWUfBSafeguards", 1, RegistryValueKind.DWord);
+                    if (baseKey != null)
+                    {
+                        baseKey.SetValue("UseFilter", 1, RegistryValueKind.DWord);
+                    }
                 }
 
-                using (RegistryKey moSetupKey = Registry.LocalMachine.CreateSubKey(@"SYSTEM\Setup\MoSetup"))
+                using (var subKey = Registry.LocalMachine.CreateSubKey($@"{ifeoPath}\SetupHost.exe\0"))
                 {
-                    moSetupKey.SetValue("AllowUpgradesWithUnsupportedTPMorCPU", 1, RegistryValueKind.DWord);
+                    if (subKey != null)
+                    {
+                        subKey.SetValue("FilterFullPath", $@"{systemDrive}\$WINDOWS.~BT\Sources\SetupHost.exe");
+                        subKey.SetValue("Debugger", scriptPath);
+                    }
                 }
 
-                ReportProgress("Patch successfully applied!");
-                // Notify that patch was applied
+                // Wait a second if the operation was too fast to ensure UI consistency
+                var elapsedPatch = DateTime.UtcNow - startTime;
+                if (elapsedPatch.TotalMilliseconds < 1000)
+                    await Task.Delay(1000 - (int)elapsedPatch.TotalMilliseconds);
+
                 await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "P0"));
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error applying patch: {ex.Message}");
-                ReportProgress($"Error: {ex.Message}");
-                await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C1"));
+                MessageBox.Show($"Error applying patch: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C1")); // reset to original state on error
             }
         }
 
         public async Task RemovePatch()
         {
+            var startTime = DateTime.UtcNow;
             try
             {
+                // Delete script files from all potential locations
+                string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+                string publicFolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+                publicFolder = Path.GetDirectoryName(publicFolder); // Get Public folder path
+                string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
 
-                ReportProgress("Removing patch files...");
-                // Remove script files
                 string[] scriptPaths = {
-                    Path.Combine(Environment.GetEnvironmentVariable("SystemDrive"), "Scripts", "get11.cmd"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments), "get11.cmd"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "get11.cmd")
+                    $@"{systemDrive}\Scripts\get11.cmd",
+                    $@"{publicFolder}\get11.cmd",
+                    $@"{programData}\get11.cmd"
                 };
 
-                foreach (string path in scriptPaths)
+                foreach (string scriptPath in scriptPaths)
                 {
-                    try
+                    if (File.Exists(scriptPath))
                     {
-                        if (File.Exists(path))
-                        {
-                            File.Delete(path);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error deleting {path}: {ex.Message}");
+                        File.Delete(scriptPath);
                     }
                 }
 
-                ReportProgress("Removing registry entries...");
-                // Remove registry entries
-                try
-                {
-                    Registry.LocalMachine.DeleteSubKeyTree(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\SetupHost.exe", false);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error removing registry key: {ex.Message}");
-                }
+                // Remove registry keys
+                const string ifeoPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options";
+                Registry.LocalMachine.DeleteSubKeyTree($@"{ifeoPath}\SetupHost.exe", false);
 
-                ReportProgress("Patch successfully removed!");
-                // Notify that patch was removed
+                // Wait a second if the operation was too fast to ensure UI consistency
+                var elapsedUnpatch = DateTime.UtcNow - startTime;
+                if (elapsedUnpatch.TotalMilliseconds < 1000)
+                    await Task.Delay(1000 - (int)elapsedUnpatch.TotalMilliseconds);
+
                 await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "P1"));
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error removing patch: {ex.Message}");
-                ReportProgress($"Error: {ex.Message}");
-                await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C0"));
+                MessageBox.Show($"Error removing patch: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C0")); // reset to original state on error
             }
         }
 
-private string CreatePatchCmdContent() // literal copy of Skip TPM Check on Dynamic Update V13 by AveYo cuz this is an lazy lazy patch, to hopefully fix it. ill test it later.
-{
-    return @"@(set '(=)||' <# lean and mean cmd / powershell hybrid #> @'
-
-::# Get 11 on 'unsupported' PC via Windows Update or mounted ISO (no patching needed)
-::# if WU is stuck use windows_update_refresh.bat; Beta/Dev/Canary needs OfflineInsiderEnroll
-::# V13: skip 2nd tpm check on Canary iso; no Server label; future proofing; tested with 26010 iso, wu and wu repair version
-
-@echo off & title get 11 on 'unsupported' PC || AveYo 2023.12.07
-if /i ""%~f0"" neq ""%SystemDrive%\Scripts\get11.cmd"" goto setup
+        private string CreatePatchCmdContent()
+        {
+            // SetupHost.exe patch from Skip TPM Check on Dynamic Update V13 by AveYo
+            return @"@echo off
 powershell -win 1 -nop -c "";""
 set CLI=%*& set SOURCES=%SystemDrive%\$WINDOWS.~BT\Sources& set MEDIA=.& set MOD=CLI& set PRE=WUA& set /a VER=11
 if not defined CLI (exit /b) else if not exist %SOURCES%\SetupHost.exe (exit /b)
@@ -254,8 +222,7 @@ if %VER%_%MOD% == 11_CLI (set ARG=%OPT% %CLI%)
 %SOURCES%\WindowsUpdateBox.exe %ARG%
 if %errorlevel% == %restart_application% (call :canary & %SOURCES%\WindowsUpdateBox.exe %ARG%)
 exit /b
-
-:canary iso skip 2nd tpm check by AveYo  
+:canary
 set C=  $X='%SOURCES%\hwreqchk.dll'; $Y='SQ_TpmVersion GTE 1'; $Z='SQ_TpmVersion GTE 0'; if (test-path $X) { 
 set C=%C%  try { takeown.exe /f $X /a; icacls.exe $X /grant *S-1-5-32-544:f; attrib -R -S $X; [io.file]::OpenWrite($X).close() }
 set C=%C%  catch { return }; $R=[Text.Encoding]::UTF8.GetBytes($Z); $l=$R.Length; $i=2; $w=!1;
@@ -264,53 +231,14 @@ set C=%C%  $S=[BitConverter]::ToString([Text.Encoding]::UTF8.GetBytes($Y)) -repl
 set C=%C%  do { $i=$H.IndexOf($S, $i + 2); if ($i -gt 0) { $w=!0; for ($k=0; $k -lt $l; $k++) { $B[$k + $i / 2]=$R[$k] } } }
 set C=%C%  until ($i -lt 1); if ($w) { [io.file]::WriteAllBytes($X, $B); [GC]::Collect() } }
 if %VER%_%PRE% == 11_ISO powershell -nop -c iex($env:C) >nul 2>nul
-exit /b
-
-:setup
-::# elevate with native shell by AveYo
->nul reg add hkcu\software\classes\.Admin\shell\runas\command /f /ve /d ""cmd /x /d /r set \""f0=%%2\""& call \""%%2\"" %%3""& set _= %*
->nul fltmc|| if ""%f0%"" neq ""%~f0%"" (cd.>""%temp%\runas.Admin"" & start ""%~n0"" /high ""%temp%\runas.Admin"" ""%~f0%"" ""%_:\""""\"""" & exit /b)
-
-::# lean xp+ color macros by AveYo:  %<%:af "" hello ""%>>%  &  %<%:cf "" w\""or\""ld ""%>%   for single \ / "" use .%|%\  .%|%/  \""%|%\""
-for /f ""delims=:"" %%s in ('echo;prompt $h$s$h:^|cmd /d') do set ""|=%%s""&set "">>=\..\c nul&set /p s=%%s%%s%%s%%s%%s%%s%%s<nul&popd""
-set ""<=pushd ""%appdata%""&2>nul findstr /c:\ /a"" &set "">=%>>%&echo;"" &set ""|=%|:~0,1%"" &set /p s=\<nul>""%appdata%\c""
-
-::# toggle when launched without arguments, else jump to arguments: ""install"" or ""remove""
-set CLI=%*& (set IFEO=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options)
-wmic /namespace:""\\root\subscription"" path __EventFilter where Name=""Skip TPM Check on Dynamic Update"" delete >nul 2>nul & rem v1
-reg delete ""%IFEO%\vdsldr.exe"" /f 2>nul & rem v2 - v5
-if /i ""%CLI%""=="""" reg query ""%IFEO%\SetupHost.exe\0"" /v Debugger >nul 2>nul && goto remove || goto install
-if /i ""%~1""==""install"" (goto install) else if /i ""%~1""==""remove"" goto remove
-
-:install
-mkdir %SystemDrive%\Scripts >nul 2>nul & copy /y ""%~f0"" ""%SystemDrive%\Scripts\get11.cmd"" >nul 2>nul
-reg add ""%IFEO%\SetupHost.exe"" /f /v UseFilter /d 1 /t reg_dword >nul
-reg add ""%IFEO%\SetupHost.exe\0"" /f /v FilterFullPath /d ""%SystemDrive%\$WINDOWS.~BT\Sources\SetupHost.exe"" >nul
-reg add ""%IFEO%\SetupHost.exe\0"" /f /v Debugger /d ""%SystemDrive%\Scripts\get11.cmd"" >nul
-echo;
-%<%:f0 "" Skip TPM Check on Dynamic Update V13 ""%>>% & %<%:2f "" INSTALLED ""%>>% & %<%:f0 "" run again to remove ""%>%
-if /i ""%CLI%""=="""" timeout /t 7
-exit /b
-
-:remove
-del /f /q ""%SystemDrive%\Scripts\get11.cmd"" ""%Public%\get11.cmd"" ""%ProgramData%\get11.cmd"" >nul 2>nul
-reg delete ""%IFEO%\SetupHost.exe"" /f >nul 2>nul
-echo;
-%<%:f0 "" Skip TPM Check on Dynamic Update V13 ""%>>% & %<%:df "" REMOVED ""%>>% & %<%:f0 "" run again to install ""%>%
-if /i ""%CLI%""=="""" timeout /t 7
-exit /b
-
-'@); $0 = ""$env:temp\Skip_TPM_Check_on_Dynamic_Update.cmd""; ${(=)||} -split ""\r?\n"" | out-file $0 -encoding default -force; & $0
-# press enter";
-}
-        
+exit /b";
+        }
 
         // Windows Update Refresh
         public async Task RefreshWindowsUpdate()
         {
             try
             {
-
                 // Stop services
                 ReportProgress("Stopping Windows Update services...");
                 await StopServices(new[] { "msiserver", "wuauserv", "bits", "usosvc", "dosvc", "cryptsvc" });
@@ -386,8 +314,7 @@ exit /b
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Error during cleanup: {ex.Message}");
-                        ReportProgress($"Error during cleanup: {ex.Message}");
+                        MessageBox.Show($"Error during cleanup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 });
 
@@ -406,8 +333,7 @@ exit /b
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error refreshing Windows Update: {ex.Message}");
-                ReportProgress($"Error: {ex.Message}");
+                MessageBox.Show($"Error refreshing Windows Update: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await Task.Run(() => RaiseStatusEvent(WindowsUpdateRefreshed, "WUR")); // Send completion even on error
             }
         }
@@ -424,7 +350,7 @@ exit /b
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error stopping {service}: {ex.Message}");
+                    MessageBox.Show($"Error stopping {service}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -441,7 +367,7 @@ exit /b
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error starting {service}: {ex.Message}");
+                    MessageBox.Show($"Error starting {service}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -456,7 +382,7 @@ exit /b
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error killing {process}: {ex.Message}");
+                    MessageBox.Show($"Error killing {process}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             await Task.Delay(500); // Give time for processes to terminate
@@ -473,7 +399,7 @@ exit /b
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error deleting directory {path}: {ex.Message}");
+                MessageBox.Show($"Error deleting directory {path}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -500,92 +426,9 @@ exit /b
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error running process {fileName} {arguments}: {ex.Message}");
+                MessageBox.Show($"Error running process {fileName} {arguments}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
         }
-        
-
-        // Canary Patching
-        public void PatchCanary()
-        {
-            try
-            {
-                ReportProgress("Applying canary patch to hwreqchk.dll...");
-                string sources = $@"{Environment.GetEnvironmentVariable("SystemDrive")}\$WINDOWS.~BT\Sources";
-                string hwreqchkPath = Path.Combine(sources, "hwreqchk.dll");
-
-                if (!File.Exists(hwreqchkPath))
-                {
-                    ReportProgress("hwreqchk.dll not found, skipping canary patch.");
-                    return;
-                }
-
-                // Take ownership and set permissions
-                ReportProgress("Taking ownership of hwreqchk.dll...");
-                RunProcess("takeown.exe", $"/f \"{hwreqchkPath}\" /a");
-                RunProcess("icacls.exe", $"\"{hwreqchkPath}\" /grant *S-1-5-32-544:f");
-
-                // Remove read-only and system attributes
-                ReportProgress("Modifying file attributes...");
-                uint attributes = GetFileAttributes(hwreqchkPath);
-                attributes &= ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM);
-                SetFileAttributes(hwreqchkPath, attributes);
-
-                // Read file and find patterns
-                ReportProgress("Searching for TPM version check pattern...");
-                byte[] fileContents = File.ReadAllBytes(hwreqchkPath);
-
-                // Convert patterns to byte arrays
-                string originalPattern = "SQ_TpmVersion GTE 1";
-                string replacementPattern = "SQ_TpmVersion GTE 0";
-
-                byte[] originalBytes = Encoding.UTF8.GetBytes(originalPattern);
-                byte[] replacementBytes = Encoding.UTF8.GetBytes(replacementPattern);
-
-                // Search and replace patterns
-                bool modified = false;
-                for (int i = 0; i < fileContents.Length - originalBytes.Length; i++)
-                {
-                    bool match = true;
-                    for (int j = 0; j < originalBytes.Length; j++)
-                    {
-                        if (fileContents[i + j] != originalBytes[j])
-                        {
-                            match = false;
-                            break;
-                        }
-                    }
-
-                    if (match)
-                    {
-                        modified = true;
-                        for (int j = 0; j < replacementBytes.Length; j++)
-                        {
-                            fileContents[i + j] = replacementBytes[j];
-                        }
-                        i += originalBytes.Length;
-                    }
-                }
-
-                if (modified)
-                {
-                    // Save the modified file
-                    ReportProgress("Patching TPM version check...");
-                    File.WriteAllBytes(hwreqchkPath, fileContents);
-                    ReportProgress("Canary patch applied successfully!");
-                }
-                else
-                {
-                    ReportProgress("TPM version check pattern not found or already patched.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in canary patch: {ex.Message}");
-                ReportProgress($"Error applying canary patch: {ex.Message}");
-            }
-        }
-        
     }
 }

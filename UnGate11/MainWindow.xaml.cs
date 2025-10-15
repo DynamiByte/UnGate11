@@ -233,9 +233,6 @@ namespace UnGate11
                 PatchButton.Content = _currentPatchState == "unpatched" ? "Patching" : "Unpatching";
                 _progressTextBlock.Visibility = Visibility.Visible;
                 _progressTextBlock.Opacity = 1;
-                _progressTextBlock.Text = _currentPatchState == "unpatched" ?
-                    "Preparing to apply Windows 11 TPM bypass patch..." :
-                    "Preparing to remove Windows 11 TPM bypass patch...";
             }
             else if (type == "refresh")
             {
@@ -312,7 +309,7 @@ namespace UnGate11
             LoadingGIF.Visibility = Visibility.Collapsed;
             LoadingGIF.Opacity = 0;
         }
-        
+
 
         // Event Handlers
         private async void PatchButton_Left(object sender, MouseButtonEventArgs e)
@@ -324,7 +321,14 @@ namespace UnGate11
             }
             StartTask("patch");
 
-            await _systemHelper.ApplyPatch();
+            if (_currentPatchState == "unpatched")
+            {
+                await _systemHelper.ApplyPatch();
+            }
+            else if (_currentPatchState == "patched")
+            {
+                await _systemHelper.RemovePatch();
+            }
         }
 
         private void PatchButton_Right(object sender, MouseButtonEventArgs e)
