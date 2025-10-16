@@ -362,12 +362,72 @@ namespace UnGate11
                 return;
             }
 
-            var storyboard = (Storyboard)FindResource("SlideOutWindow");
-            storyboard.Completed += (s, args) =>
+            // Get native top converted to WPF DIPs and apply optional tweak
+            double currentTopDip = GetNativeWindowTop();
+
+            // Clear any existing animation hold and set base value to the true visual top
+            this.BeginAnimation(Window.TopProperty, null);
+            this.Top = currentTopDip;
+
+            // Clone storyboard and anchor the Top animation to the current DIP position
+            var storyboardResource = (Storyboard)FindResource("SlideOutWindow");
+            var sb = storyboardResource.Clone();
+
+            foreach (var child in sb.Children)
             {
-                Application.Current.Shutdown();
-            };
-            storyboard.Begin(this);
+                if (child is DoubleAnimation da)
+                {
+                    var prop = Storyboard.GetTargetProperty(da);
+                    string path = prop != null ? prop.Path : string.Empty;
+                    if (path.Contains("Top") || path.Contains("(Window.Top)"))
+                    {
+                        da.From = currentTopDip;
+                        da.To = currentTopDip + 50; // same movement as XAML; change if desired
+                        da.By = null;
+                        break;
+                    }
+                }
+            }
+
+            sb.Completed += (s, args) => Application.Current.Shutdown();
+            sb.Begin(this);
+        }
+
+        [global::System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        private double GetNativeWindowTop()
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(this);
+            var hWnd = helper.Handle;
+            if (hWnd == IntPtr.Zero)
+                return this.Top;
+
+            if (GetWindowRect(hWnd, out RECT rect))
+            {
+                // Convert physical pixels to WPF device-independent units (DIPs)
+                var source = PresentationSource.FromVisual(this);
+                if (source?.CompositionTarget != null)
+                {
+                    var transform = source.CompositionTarget.TransformFromDevice;
+                    var topDip = transform.Transform(new System.Windows.Point(rect.Left, rect.Top)).Y;
+                    return topDip;
+                }
+
+                // fallback (assume 1:1)
+                return rect.Top;
+            }
+
+            return this.Top;
         }
 
         private void HandleInvalidButtonClick(ContentControl button)
