@@ -15,7 +15,7 @@
     <RepositoryUrl>https://github.com/DynamiByte/UnGate11</RepositoryUrl>
     <Description>UnGate11, a tool used to remove the Windows 11 install requirements.</Description>
     <SignAssembly>false</SignAssembly>
-    <Version>0.3.2</Version>
+    <Version>0.3.3</Version>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Copyright>©2025</Copyright>
     <PackageId>UnGate11</PackageId>
