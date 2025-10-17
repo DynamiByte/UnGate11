@@ -318,14 +318,14 @@
                          Storyboard.TargetProperty="Opacity"
                          To="0.3" Duration="0:0:0.3"/>
         </Storyboard>
+        
         <!-- Fade in LogoCanvas -->
         <Storyboard x:Key="FadeLogoIn">
             <DoubleAnimation Storyboard.TargetName="LogoCanvas"
                          Storyboard.TargetProperty="Opacity"
                          To="1" Duration="0:0:0.3"/>
-        
-        
         </Storyboard>
+        
         <!-- Fade in LoadingGIF -->
         <Storyboard x:Key="FadeLoadingIn">
             <ObjectAnimationUsingKeyFrames Storyboard.TargetName="LoadingGIF"
@@ -348,6 +348,7 @@
             </ObjectAnimationUsingKeyFrames>
         </Storyboard>
 
+        <!-- Fade in winow on open (start or from minimized) -->
         <Storyboard x:Key="FadeInWindow">
             <DoubleAnimation
         Storyboard.TargetProperty="Opacity"
@@ -368,7 +369,8 @@ To="0" Duration="0:0:0.2">
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
-
+        
+        <!-- Slide and fade out window (on close) -->
         <Storyboard x:Key="SlideOutWindow">
             <DoubleAnimation 
         Storyboard.TargetProperty="(Window.Top)"
@@ -385,24 +387,28 @@ To="0" Duration="0:0:0.2">
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
+        
         <!-- Fade out PatchButton -->
         <Storyboard x:Key="FadePatchButtonOut">
             <DoubleAnimation Storyboard.TargetName="PatchButton"
                          Storyboard.TargetProperty="Opacity"
                          To="0.3" Duration="0:0:0.3"/>
         </Storyboard>
+        
         <!-- Fade in PatchButton -->
         <Storyboard x:Key="FadePatchButtonIn">
             <DoubleAnimation Storyboard.TargetName="PatchButton"
                          Storyboard.TargetProperty="Opacity"
                          To="1" Duration="0:0:0.3"/>
         </Storyboard>
+        
         <!-- Fade out UpdateRefreshButton -->
         <Storyboard x:Key="FadeRefreshButtonOut">
             <DoubleAnimation Storyboard.TargetName="UpdateRefreshButton"
                          Storyboard.TargetProperty="Opacity"
                          To="0.3" Duration="0:0:0.3"/>
         </Storyboard>
+        
         <!-- Fade in UpdateRefreshButton -->
         <Storyboard x:Key="FadeRefreshButtonIn">
             <DoubleAnimation Storyboard.TargetName="UpdateRefreshButton"

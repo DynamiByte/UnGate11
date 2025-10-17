@@ -23,6 +23,7 @@ namespace UnGate11
         private const int TASK_COMPLETION_DELAY_MS = 500;
         private const double GIF_FRAME_DELAY_MS = 24;
         
+
         // Fields
         // GIF animation
         private BitmapDecoder _gifDecoder;
@@ -48,6 +49,7 @@ namespace UnGate11
         private Storyboard _fadePatchButtonIn, _fadePatchButtonOut;
         private Storyboard _fadeRefreshButtonIn, _fadeRefreshButtonOut;
         
+
         // Constructor and Initialization
         public MainWindow()
         {
@@ -114,6 +116,7 @@ namespace UnGate11
             VersionLabel.Content = $"v{version.Major}.{version.Minor}.{version.Build}";
         }
         
+
         // System Helper Event Handlers
         private void SystemHelper_PatchStatusChecked(object sender, WindowsSystemHelper.StatusEventArgs e)
         {
@@ -185,6 +188,7 @@ namespace UnGate11
             });
         }
         
+
         // Task Management
         private void SetInteractionEnabled(bool state)
         {
@@ -257,6 +261,7 @@ namespace UnGate11
             await Dispatcher.InvokeAsync(() => control.Content = content);
         }
         
+
         // GIF Animation
         private void LoadGifDecoder()
         {
@@ -304,6 +309,7 @@ namespace UnGate11
             LoadingGIF.Visibility = Visibility.Collapsed;
             LoadingGIF.Opacity = 0;
         }
+
 
         // Event Handlers
         private async void PatchButton_Left(object sender, MouseButtonEventArgs e)
@@ -417,6 +423,7 @@ namespace UnGate11
                     var topDip = transform.Transform(new System.Windows.Point(rect.Left, rect.Top)).Y;
                     return topDip;
                 }
+
                 // fallback (assume 1:1)
                 return rect.Top;
             }
@@ -487,11 +494,15 @@ namespace UnGate11
             storyboard.Begin(this);
         }
 
-        private void Info(object sender, MouseButtonEventArgs e) => Process.Start(new ProcessStartInfo { FileName = "https://github.com/DynamiByte/UnGate11/blob/master/README.md", UseShellExecute = true });
+        private void Info(object sender, MouseButtonEventArgs e) => Process.Start(new ProcessStartInfo { FileName = "https://github.com/DynamiByte/UnGate11/blob/master/README.md" });
+
         private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();
+
         private void PlayErrorSound() => SystemSounds.Hand.Play();
+
         private Version GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         
+
         // Resource Management
         private void ExtractResourceToFile(string resourceFileName, string destinationPath)
         {
@@ -507,6 +518,7 @@ namespace UnGate11
             }
         }
         
+
         // IDisposable Implementation
         public void Dispose()
         {
