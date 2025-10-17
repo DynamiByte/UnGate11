@@ -9,8 +9,6 @@ Of course, after running this program.
 
 If you have pending updates in settings, you may want to finish them, or press the Refresh Windows Update button in the program, which resets all Windows Update components.
 This effectively allows you to skip any pending updates.
-It may be necessary if you encounter errors during the Windows 11 setup.
-**(This doesn't just apply to installing from ISO on unsupported devices, It's with ISO installations in general, although it is uncommon)**
 You may need to Restart your PC if the Windows 11 setup still fails, then Refresh again.
 
 By patching, I mean it modifies the registry and some system files
@@ -27,4 +25,4 @@ in order to create a bootable USB drive that bypasses the restrictions, and can 
 The pre-built EXE program is available in the [Releases](https://github.com/DynamiByte/UnGate11/releases)
 No installation is needed, just run it and you're all good to go!
 
-As of now, the current version of the program is **v0.3.3**.
+As of now, the current version of the program is **v1.0.0**.
