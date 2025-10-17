@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -9,6 +10,9 @@ namespace UnGate11
 {
     public class WindowsSystemHelper
     {
+        private static readonly string LogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnGate11", "logs");
+        private static readonly string LogFile = Path.Combine(LogPath, $"unGate11_{DateTime.UtcNow:yyyyMMdd_HHmmss}.log");
+
         // Events for Status Communication
         public event EventHandler<StatusEventArgs> PatchStatusChecked;
         public event EventHandler<StatusEventArgs> PatchActionCompleted;
@@ -47,6 +51,37 @@ namespace UnGate11
         private void ReportProgress(string message)
         {
             ProgressReported?.Invoke(this, new ProgressEventArgs(message));
+            Log(message);
+        }
+
+        private static void EnsureLogDirectory()
+        {
+            try
+            {
+                if (!Directory.Exists(LogPath))
+                    Directory.CreateDirectory(LogPath);
+            }
+            catch { }
+        }
+
+        private static void Log(string message)
+        {
+            try
+            {
+                EnsureLogDirectory();
+                File.AppendAllText(LogFile, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+            }
+            catch { }
+        }
+
+        private static void LogException(Exception ex, string context = null)
+        {
+            try
+            {
+                EnsureLogDirectory();
+                File.AppendAllText(LogFile, $"[{DateTime.UtcNow:O}] EX: {context} {ex}\n");
+            }
+            catch { }
         }
 
         // Patch Check and Application
@@ -73,7 +108,7 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error checking patch status: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogException(ex, "CheckPatchStatus");
                 await Task.Run(() => RaiseStatusEvent(PatchStatusChecked, "C1")); // Default to unpatched on error
             }
         }
@@ -148,7 +183,7 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error applying patch: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogException(ex, "ApplyPatch");
                 await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C1")); // reset to original state on error
             }
         }
@@ -191,7 +226,7 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error removing patch: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogException(ex, "RemovePatch");
                 await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C0")); // reset to original state on error
             }
         }
@@ -253,70 +288,68 @@ exit /b";
                 });
 
                 // Clean up files
-                await Task.Run(() => {
-                    try
+                try
+                {
+                    ReportProgress("Cleaning update logs and cache files...");
+                    // Delete update logs
+                    string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+                    string systemRoot = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+
+                    DeleteDirectory($@"{programData}\USOShared\Logs");
+                    DeleteDirectory($@"{programData}\USOPrivate\UpdateStore");
+                    DeleteDirectory($@"{programData}\Microsoft\Network\Downloader");
+                    DeleteDirectory($@"{systemRoot}\Logs\WindowsUpdate");
+                    DeleteDirectory($@"{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)}\UNP");
+                    DeleteDirectory($@"{systemRoot}\SoftwareDistribution");
+                    DeleteDirectory($@"{systemDrive}\Windows.old\Cleanup");
+
+                    // Cleanup Windows Update packages
+                    ReportProgress("Resetting Windows Update components...");
+                    await RunProcessAsync("dism", "/cleanup-wim");
+                    await RunProcessAsync("bitsadmin", "/reset /allusers");
+
+                    // Check if setup files exist and run cleanup
+                    string sourcesPath = $@"{systemDrive}\$WINDOWS.~BT\Sources";
+                    if (File.Exists($@"{sourcesPath}\setuphost.exe") && File.Exists($@"{sourcesPath}\setupprep.exe"))
                     {
-                        ReportProgress("Cleaning update logs and cache files...");
-                        // Delete update logs
-                        string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                        string systemRoot = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-                        string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+                        ReportProgress("Cleaning setup files...");
+                        await RunProcessAsync($@"{sourcesPath}\setupprep.exe", "/cleanup /quiet");
+                    }
 
-                        DeleteDirectory($@"{programData}\USOShared\Logs");
-                        DeleteDirectory($@"{programData}\USOPrivate\UpdateStore");
-                        DeleteDirectory($@"{programData}\Microsoft\Network\Downloader");
-                        DeleteDirectory($@"{systemRoot}\Logs\WindowsUpdate");
-                        DeleteDirectory($@"{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)}\UNP");
-                        DeleteDirectory($@"{systemRoot}\SoftwareDistribution");
-                        DeleteDirectory($@"{systemDrive}\Windows.old\Cleanup");
+                    // Remove forced upgraders
+                    ReportProgress("Removing update assistants...");
+                    string[] upgradeUninstallers = {
+                        $@"{systemRoot}\UpdateAssistant\Windows10Upgrade.exe",
+                        $@"{systemDrive}\Windows10Upgrade\Windows10UpgraderApp.exe"
+                    };
 
-                        // Cleanup Windows Update packages
-                        ReportProgress("Resetting Windows Update components...");
-                        RunProcess("dism", "/cleanup-wim");
-                        RunProcess("bitsadmin", "/reset /allusers");
-
-                        // Check if setup files exist and run cleanup
-                        string sourcesPath = $@"{systemDrive}\$WINDOWS.~BT\Sources";
-                        if (File.Exists($@"{sourcesPath}\setuphost.exe") && File.Exists($@"{sourcesPath}\setupprep.exe"))
+                    foreach (string uninstaller in upgradeUninstallers)
+                    {
+                        if (File.Exists(uninstaller))
                         {
-                            ReportProgress("Cleaning setup files...");
-                            RunProcess($@"{sourcesPath}\setupprep.exe", "/cleanup /quiet");
-                        }
-
-                        // Remove forced upgraders
-                        ReportProgress("Removing update assistants...");
-                        string[] upgradeUninstallers = {
-                            $@"{systemRoot}\UpdateAssistant\Windows10Upgrade.exe",
-                            $@"{systemDrive}\Windows10Upgrade\Windows10UpgraderApp.exe"
-                        };
-
-                        foreach (string uninstaller in upgradeUninstallers)
-                        {
-                            if (File.Exists(uninstaller))
-                            {
-                                RunProcess(uninstaller, "/ForceUninstall");
-                            }
-                        }
-
-                        // Remove update remediators using MSI product codes
-                        ReportProgress("Removing remediation packages...");
-                        string[] msiProducts = {
-                            "{1BA1133B-1C7A-41A0-8CBF-9B993E63D296}", // osrss
-                            "{8F2D6CEB-BC98-4B69-A5C1-78BED238FE77}", // rempl, ruxim
-                            "{0746492E-47B6-4251-940C-44462DFD74BB}", // CUAssistant
-                            "{76A22428-2400-4521-96AF-7AC4A6174CA5}"  // UpdateAssistant
-                        };
-
-                        foreach (string product in msiProducts)
-                        {
-                            RunProcess("msiexec", $"/X {product} /qn");
+                            await RunProcessAsync(uninstaller, "/ForceUninstall");
                         }
                     }
-                    catch (Exception ex)
+
+                    // Remove update remediators using MSI product codes
+                    ReportProgress("Removing remediation packages...");
+                    string[] msiProducts = {
+                        "{1BA1133B-1C7A-41A0-8CBF-9B993E63D296}", // osrss
+                        "{8F2D6CEB-BC98-4B69-A5C1-78BED238FE77}", // rempl, ruxim
+                        "{0746492E-47B6-4251-940C-44462DFD74BB}", // CUAssistant
+                        "{76A22428-2400-4521-96AF-7AC4A6174CA5}"  // UpdateAssistant
+                    };
+
+                    foreach (string product in msiProducts)
                     {
-                        MessageBox.Show($"Error during cleanup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        await RunProcessAsync("msiexec", $"/X {product} /qn");
                     }
-                });
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex, "RefreshWindowsUpdate - cleanup");
+                }
 
                 // Start services again
                 ReportProgress("Restarting Windows Update services...");
@@ -324,7 +357,7 @@ exit /b";
 
                 // Refresh settings
                 ReportProgress("Refreshing Windows Update settings...");
-                RunProcess("UsoClient", "RefreshSettings", false);
+                await RunProcessAsync("UsoClient", "RefreshSettings", false);
 
                 ReportProgress("Windows Update refresh completed successfully!");
 
@@ -333,7 +366,7 @@ exit /b";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error refreshing Windows Update: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogException(ex, "RefreshWindowsUpdate");
                 await Task.Run(() => RaiseStatusEvent(WindowsUpdateRefreshed, "WUR")); // Send completion even on error
             }
         }
@@ -345,12 +378,12 @@ exit /b";
                 try
                 {
                     ReportProgress($"Stopping {service} service...");
-                    RunProcess("net", $"stop {service} /y");
+                    await RunProcessAsync("net", $"stop {service} /y");
                     await Task.Delay(100); // Give time for service to stop
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error stopping {service}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    LogException(ex, $"StopServices - {service}");
                 }
             }
         }
@@ -362,12 +395,12 @@ exit /b";
                 try
                 {
                     ReportProgress($"Starting {service} service...");
-                    RunProcess("net", $"start {service} /y");
+                    await RunProcessAsync("net", $"start {service} /y");
                     await Task.Delay(100); // Give time for service to start
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error starting {service}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    LogException(ex, $"StartServices - {service}");
                 }
             }
         }
@@ -378,11 +411,11 @@ exit /b";
             {
                 try
                 {
-                    RunProcess("taskkill", $"/f /im {process}.exe");
+                    await RunProcessAsync("taskkill", $"/f /im {process}.exe");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error killing {process}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    LogException(ex, $"KillProcesses - {process}");
                 }
             }
             await Task.Delay(500); // Give time for processes to terminate
@@ -399,15 +432,15 @@ exit /b";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error deleting directory {path}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogException(ex, $"DeleteDirectory - {path}");
             }
         }
 
-        private Process RunProcess(string fileName, string arguments, bool waitForExit = true)
+        private async Task<Process> RunProcessAsync(string fileName, string arguments, bool waitForExit = true, CancellationToken cancellationToken = default)
         {
             try
             {
-                ProcessStartInfo psi = new ProcessStartInfo
+                var psi = new ProcessStartInfo
                 {
                     FileName = fileName,
                     Arguments = arguments,
@@ -418,15 +451,58 @@ exit /b";
                 };
 
                 var process = Process.Start(psi);
-                if (waitForExit && process != null)
+                if (process != null)
                 {
-                    process.WaitForExit();
+                    // capture output
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var reader = process.StandardOutput;
+                            string line;
+                            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+                            {
+                                Log($"OUT: {fileName} {arguments}: {line}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogException(ex, $"StdOutRead - {fileName}");
+                        }
+                    });
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var reader = process.StandardError;
+                            string line;
+                            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+                            {
+                                Log($"ERR: {fileName} {arguments}: {line}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogException(ex, $"StdErrRead - {fileName}");
+                        }
+                    });
+
+                    if (waitForExit)
+                    {
+                        using (cancellationToken.Register(() => {
+                            try { if (!process.HasExited) process.Kill(); } catch { }
+                        }))
+                        {
+                            await process.WaitForExitAsync();
+                        }
+                    }
                 }
                 return process;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error running process {fileName} {arguments}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogException(ex, $"RunProcessAsync - {fileName} {arguments}");
                 return null;
             }
         }
