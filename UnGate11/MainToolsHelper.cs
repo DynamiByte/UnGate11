@@ -7,7 +7,7 @@ using System.Windows;
 
 namespace UnGate11
 {
-    public class WindowsSystemHelper
+    public class MainToolsHelper
     {
         // Events for Status Communication
         public event EventHandler<StatusEventArgs> PatchStatusChecked;
@@ -73,7 +73,6 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error checking patch status: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await Task.Run(() => RaiseStatusEvent(PatchStatusChecked, "C1")); // Default to unpatched on error
             }
         }
@@ -148,7 +147,6 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error applying patch: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C1")); // reset to original state on error
             }
         }
@@ -191,7 +189,6 @@ namespace UnGate11
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error removing patch: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await Task.Run(() => RaiseStatusEvent(PatchActionCompleted, "C0")); // reset to original state on error
             }
         }
@@ -314,7 +311,7 @@ exit /b";
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Error during cleanup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        // Cleanup error, continue
                     }
                 });
 
@@ -334,7 +331,6 @@ exit /b";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error refreshing Windows Update: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await Task.Run(() => RaiseStatusEvent(WindowsUpdateRefreshed, "WUR")); // Send completion even on error
             }
         }
@@ -352,7 +348,7 @@ exit /b";
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error stopping {service}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    // Service stop failed, continue with next service
                 }
             }
         }
@@ -370,7 +366,7 @@ exit /b";
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error starting {service}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    // Service start failed, continue with next service
                 }
             }
         }
@@ -386,7 +382,7 @@ exit /b";
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error killing {process}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    // Process kill failed, continue with next process
                 }
             }
             await Task.Delay(500); // Give time for processes to terminate
@@ -403,7 +399,7 @@ exit /b";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error deleting directory {path}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Directory deletion failed
             }
         }
 
@@ -430,7 +426,7 @@ exit /b";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error running process {fileName} {arguments}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Process execution failed
                 return null;
             }
         }

@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:UnGate11"
         mc:Ignorable="d"
         ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
-        Title="UnGate11" Height="350" Width="500"
+        Title="UnGate11" Height="400" Width="500"
         WindowStyle="None" AllowsTransparency="True">
 
     <Window.Background>
@@ -14,7 +14,7 @@
     </Window.Background>
 
     <Window.Clip>
-        <RectangleGeometry Rect="0,0,500,350" RadiusX="15" RadiusY="15"/>
+        <RectangleGeometry Rect="0,0,500,400" RadiusX="15" RadiusY="15"/>
     </Window.Clip>
 
     <Window.Triggers>
@@ -43,7 +43,13 @@
     <Grid>
         <Grid MouseLeftButtonDown="DragWindow" Background="Transparent"/>
 
-        <Canvas x:Name="LogoCanvas" MouseLeftButtonDown="DragWindow" VerticalAlignment="Top" Height="70" Margin="100,65,101,215" Panel.ZIndex="1">
+        <Canvas x:Name="LogoCanvas" MouseLeftButtonDown="DragWindow" VerticalAlignment="Top" Height="70" Margin="100,65,101,215" Panel.ZIndex="1" RenderTransformOrigin="0.5,0.5">
+            <Canvas.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="LogoScale" ScaleX="1" ScaleY="1"/>
+                    <TranslateTransform x:Name="LogoTranslate" X="0" Y="0"/>
+                </TransformGroup>
+            </Canvas.RenderTransform>
             <Label
             Content="UnGate"
             FontFamily="Segoe UI"
@@ -81,6 +87,627 @@
             Opacity="1"
             IsHitTestVisible="False"
             Panel.ZIndex="2"/>
+
+        <!-- Advanced Tools Subtitle -->
+        <TextBlock 
+            x:Name="AdvancedSubtitle"
+            Text="Advanced Tools"
+            FontFamily="Bahnschrift"
+            FontWeight="Bold"
+            FontSize="18"
+            Foreground="White"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,105,0,0"
+            Opacity="0"
+            Visibility="Collapsed"
+            Panel.ZIndex="1"
+            MouseLeftButtonDown="DragWindow"/>
+
+        <!-- Main Button Panel -->
+        <StackPanel x:Name="MainButtonPanel"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Margin="0,120,0,0">
+            
+            <Label
+                x:Name="PatchButton"
+                Content="Checking patch state"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="16"
+                Background="#218DE7" Foreground="White" BorderThickness="0"
+                Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="PatchButton_Left" MouseRightButtonUp="PatchButton_Right"
+                Margin="0,5,0,5">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+
+            <Label
+                x:Name="UpdateRefreshButton"
+                Content="Refresh Windows Update"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="16"
+                Background="#218DE7" Foreground="White" BorderThickness="0"
+                Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="UpdateRefreshButton_Left" MouseRightButtonUp="UpdateRefreshButton_Right"
+                Margin="0,5,0,5">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+
+            <Label
+                x:Name="AdvancedToolsButton"
+                Content="Advanced Tools"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="16"
+                Background="#218DE7" Foreground="White" BorderThickness="0"
+                Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="AdvancedToolsButton_Click"
+                Margin="0,5,0,5">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+        </StackPanel>
+
+        <!-- Advanced Menu Panel -->
+        <StackPanel x:Name="AdvancedMenuPanel"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Margin="0,120,0,0"
+            Opacity="0"
+            Visibility="Collapsed">
+
+            <Label
+                x:Name="EditionChangeButtonAdv"
+                Content="Change Windows Edition"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="14"
+                Background="#218DE7" Foreground="White" BorderThickness="0"
+                Height="50" Width="250" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="EditionChangeButtonAdv_Click"
+                Margin="0,5,0,5"
+                Cursor="Hand">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,250,50" RadiusX="8" RadiusY="8"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+
+            <Label
+                x:Name="ActivationStatusButtonAdv"
+                Content="Check Activation Status"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="14"
+                Background="#218DE7" Foreground="White" BorderThickness="0"
+                Height="50" Width="250" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="ActivationStatusButtonAdv_Click"
+                Margin="0,5,0,5"
+                Cursor="Hand">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,250,50" RadiusX="8" RadiusY="8"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+
+            <Label
+                x:Name="HwidActivationButtonAdv"
+                Content="HWID Activation"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="14"
+                Background="#218DE7" Foreground="White" BorderThickness="0"
+                Height="50" Width="250" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="HwidActivationButtonAdv_Click"
+                Margin="0,5,0,5"
+                Cursor="Hand">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,250,50" RadiusX="8" RadiusY="8"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+
+            <Label
+                x:Name="BackToMainButton"
+                Content="← Back"
+                FontFamily="Bahnschrift" FontWeight="Bold" FontSize="14"
+                Background="#666666" Foreground="White" BorderThickness="0"
+                Height="40" Width="150" RenderTransformOrigin="0.5 0.5"
+                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                MouseLeftButtonUp="BackToMainButton_Click"
+                Margin="0,10,0,0"
+                Cursor="Hand">
+                <Label.Clip>
+                    <RectangleGeometry Rect="0,0,150,40" RadiusX="8" RadiusY="8"/>
+                </Label.Clip>
+                <Label.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <TranslateTransform X="0" Y="0" />
+                    </TransformGroup>
+                </Label.RenderTransform>
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1.05" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation
+                                                Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                To="1" Duration="0:0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <QuadraticEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
+        </StackPanel>
+
+        <!-- Output ScrollViewer -->
+        <ScrollViewer x:Name="AdvancedOutputScrollViewer"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Margin="20,135,20,80"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="Collapsed"
+            Opacity="0">
+            <TextBlock x:Name="AdvancedOutputTextBlock"
+                Foreground="White"
+                FontFamily="Consolas"
+                FontSize="11"
+                TextWrapping="Wrap"
+                Background="#22000000"
+                Padding="10"/>
+        </ScrollViewer>
+
+        <!-- Back to Menu button for output screen -->
+        <Label
+            x:Name="BackToMenuFromOutputButton"
+            Content="← Back to Menu"
+            FontFamily="Bahnschrift" FontWeight="Bold" FontSize="14"
+            Background="#666666" Foreground="White" BorderThickness="0"
+            Height="40" Width="180" RenderTransformOrigin="0.5 0.5"
+            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            MouseLeftButtonUp="BackToMenuFromOutput_Click"
+            Margin="0,0,0,20"
+            Cursor="Hand"
+            Visibility="Collapsed"
+            Opacity="0">
+            <Label.Clip>
+                <RectangleGeometry Rect="0,0,180,40" RadiusX="8" RadiusY="8"/>
+            </Label.Clip>
+            <Label.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                    <TranslateTransform X="0" Y="0" />
+                </TransformGroup>
+            </Label.RenderTransform>
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                            To="1.05" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                            To="1.05" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                            To="1" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(Label.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                            To="1" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <!-- Edition Selection Panel -->
+        <StackPanel x:Name="EditionSelectionPanel"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Margin="0,50,0,0"
+            Visibility="Collapsed"
+            Opacity="0">
+            
+            <ScrollViewer 
+                MaxHeight="200"
+                Width="300"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="EditionButtonsPanel"
+                    HorizontalAlignment="Center">
+                </StackPanel>
+            </ScrollViewer>
+        </StackPanel>
 
         <Label
             x:Name="CloseLabel"
@@ -177,136 +804,6 @@
             </Label.Style>
         </Label>
 
-        <Label
-            x:Name="PatchButton"
-            Content="Checking patch state"
-            FontFamily="Bahnschrift" FontWeight="Bold" FontSize="16"
-            Background="#218DE7" Foreground="White" BorderThickness="0"
-            Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
-            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,50,0,0"
-            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-            MouseLeftButtonUp="PatchButton_Left" MouseRightButtonUp="PatchButton_Right" >
-            <Label.Clip>
-                <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"></RectangleGeometry>
-            </Label.Clip>
-            <Label.RenderTransform>
-                <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
-            </Label.RenderTransform>
-            <Label.Style>
-                <Style TargetType="Label">
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)"
-                                            To="1.05" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)"
-                                            To="1.05" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                            <Trigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)"
-                                            To="1" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation
-                                            Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)"
-                                            To="1" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.ExitActions>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Label.Style>
-        </Label>
-
-        <Label
-            x:Name="UpdateRefreshButton"
-            Content="Refresh Windows Update"
-            FontFamily="Bahnschrift" FontWeight="Bold" FontSize="16"
-            Background="#218DE7" Foreground="White" BorderThickness="0"
-            Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
-            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,210,0,0"
-            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-            MouseLeftButtonUp="UpdateRefreshButton_Left" MouseRightButtonUp="UpdateRefreshButton_Right" >
-            <Label.Clip>
-                <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"></RectangleGeometry>
-            </Label.Clip>
-            <Label.RenderTransform>
-                <ScaleTransform x:Name="ScaleTransform2" ScaleX="1" ScaleY="1" />
-            </Label.RenderTransform>
-            <Label.Style>
-                <Style TargetType="Label">
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                     Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)"
-                                     To="1.05" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation
-                                     Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)"
-                                     To="1.05" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                            <Trigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation
-                                     Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)"
-                                     To="1" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation
-                                     Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)"
-                                     To="1" Duration="0:0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.ExitActions>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Label.Style>
-        </Label>
-
         <Label MouseLeftButtonDown="DragWindow" Visibility="Hidden" FontFamily="Bahnschrift" x:Name="PatchStateLabel" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="5"/>
         <Label MouseLeftButtonDown="DragWindow" FontFamily="Bahnschrift" Foreground="White" x:Name="VersionLabel" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5" />
     </Grid>
@@ -388,6 +885,33 @@ To="0" Duration="0:0:0.2">
             </DoubleAnimation>
         </Storyboard>
         
+        <!-- Wiggle storyboard for buttons (no TargetName; target set from code) -->
+        <Storyboard x:Key="WiggleButton" FillBehavior="Stop" Duration="0:0:0.4">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.08" Value="-10">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.16" Value="10">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.24" Value="-7">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+        
         <!-- Fade out PatchButton -->
         <Storyboard x:Key="FadePatchButtonOut">
             <DoubleAnimation Storyboard.TargetName="PatchButton"
@@ -412,6 +936,20 @@ To="0" Duration="0:0:0.2">
         <!-- Fade in UpdateRefreshButton -->
         <Storyboard x:Key="FadeRefreshButtonIn">
             <DoubleAnimation Storyboard.TargetName="UpdateRefreshButton"
+                         Storyboard.TargetProperty="Opacity"
+                         To="1" Duration="0:0:0.3"/>
+        </Storyboard>
+        
+        <!-- Fade out AdvancedToolsButton -->
+        <Storyboard x:Key="FadeAdvancedButtonOut">
+            <DoubleAnimation Storyboard.TargetName="AdvancedToolsButton"
+                         Storyboard.TargetProperty="Opacity"
+                         To="0.3" Duration="0:0:0.3"/>
+        </Storyboard>
+        
+        <!-- Fade in AdvancedToolsButton -->
+        <Storyboard x:Key="FadeAdvancedButtonIn">
+            <DoubleAnimation Storyboard.TargetName="AdvancedToolsButton"
                          Storyboard.TargetProperty="Opacity"
                          To="1" Duration="0:0:0.3"/>
         </Storyboard>

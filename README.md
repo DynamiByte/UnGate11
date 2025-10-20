@@ -1,30 +1,79 @@
-<img src="Banner.png">  
 
-## UnGate11 is a full GUI program that bypasses Windows 11 installation restrictions
+<img src="Banner.png">
 
-It does this in such a way that it even allows it to update through settings.
-Not just an ISO. Although due to how Microsoft releases updates, sometimes the newest updates may not show up in settings.
-Generally I recommend extracting or mounting the ISO and running `setup.exe` from there.
-Of course, after running this program.
+# UnGate11
 
-If you have pending updates in settings, you may want to finish them, or press the Refresh Windows Update button in the program, which resets all Windows Update components.
-This effectively allows you to skip any pending updates.
-It may be necessary if you encounter errors during the Windows 11 setup.
-**(This doesn't just apply to installing from ISO on unsupported devices, It's with ISO installations in general, although it is uncommon)**
-You may need to Restart your PC if the Windows 11 setup still fails, then Refresh again.
+UnGate11 is a full GUI program that bypasses Windows 11 installation restrictions and helps you install/manage Windows 11 on unsupported hardware.
 
-By patching, I mean it modifies the registry and some system files
-in order to make Windows think it's running on a supported system.
-This project is open source and free to use, but please consider starring the repo if you find it useful.
+## Features
 
-This program is meant to be used for updating **existing** Windows installations to Windows 11 on unsupported hardware.
-The supported installations/operating systems are Windows 10 version 2004 and later, and all Windows 11 versions.
-(Also useful when updating to a newer version of Windows 11; for example, from 24H2 to 25H2)
+- **Patch/Unpatch System:** Bypasses requirements such as TPM, Secure Boot, RAM, and CPU, by modifying registry and system files related to `SetupHost.exe`.
+- **Refresh Windows Update:** Reset Windows Update components, clear caches, and remove forced upgrade assistants.
+- **Advanced Tools (Beta):**
+  - Change Windows edition (Professional, Enterprise, etc.)
+  - Check activation status (Windows & Office)
+  - HWID Activation (digital license)
 
-If you wish to install Windows 11 on unsupported hardware from scratch, I recommend using an amazing tool called [Rufus](https://rufus.ie/)
-in order to create a bootable USB drive that bypasses the restrictions, and can even remove the need for a Microsoft account, BitLocker, and more!
+## How It Works
 
-The pre-built EXE program is available in the [Releases](https://github.com/DynamiByte/UnGate11/releases)
-No installation is needed, just run it and you're all good to go!
+UnGate11 modifies the registry and creates a script (`get11.cmd`) to:
+- Bypass hardware checks (TPM, Secure Boot, CPU)
+- Enable Windows 11 installation via Windows Update or ISO
+- Use "Skip TPM Check on Dynamic Update" by AveYo
 
-As of now, the current version of the program is **v0.3.4**.
+## Usage
+
+### Install/Update to Windows 11
+1. Run UnGate11 as administrator
+2. Click **Patch** to apply modifications
+3. Install via:
+   - **Windows Update:** Settings > Windows Update
+   - **ISO:** Mount/extract ISO and run `setup.exe`
+
+### Refresh Windows Update
+1. Click **Refresh Windows Update**
+2. Wait for completion
+3. Try setup again or restart if needed
+
+### Advanced Tools (Beta)
+- Change Windows edition (requires valid product key)
+- Check activation status (Windows/Office)
+- HWID Activation (digital license)
+
+*Advanced Tools are experimental and subject to change.*
+
+## System Requirements
+
+- Windows 10 version 2004 (build 19041) or later
+- All Windows 11 versions
+
+*For updating existing Windows installations only.*
+
+## Fresh Installation
+
+For clean installs on unsupported hardware, use [Rufus](https://rufus.ie/) to create a bootable USB that:
+- Bypasses TPM, Secure Boot, RAM requirements
+- Removes Microsoft account requirement
+- Disables BitLocker and telemetry
+- Offers other customizations
+
+## Tips & Troubleshooting
+
+- Complete/refresh Windows Update before setup
+- Use ISO method for latest updates
+- If setup errors occur, refresh Windows Update, restart, and try again
+
+## Download
+
+Get the pre-built executable from [Releases](https://github.com/DynamiByte/UnGate11/releases).
+
+**No installation needed** – just download and run!
+
+**Current Version:** v1.0.0 (Advanced Tools Beta 1)
+
+## License & Credits
+
+Open source and free to use. Please star the repo if you find it useful!
+
+**Credits:**
+- `SetupHost.exe` patch from on "Skip TPM Check on Dynamic Update V13" by AveYo
